@@ -11,16 +11,21 @@
   #bar { display:flex; height:100vh; width:100vw; }
   #redSide  { background:linear-gradient(180deg,#e03131,#a61e1e); transition:width .3s; }
   #yelSide  { background:linear-gradient(180deg,#ffd43b,#e8a90c); transition:width .3s; color:#3a2b00; }
-  .side { display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
+  .side { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
+  .label { position:absolute; top:8vh; left:0; right:0; text-align:center; font-size:7vw;
+           font-weight:900; letter-spacing:1px; white-space:nowrap; }
+  #redSide .label { color:#ffd43b; text-shadow:0 2px 8px rgba(0,0,0,.45); }
+  #yelSide .label { color:#e03131; text-shadow:0 1px 4px rgba(255,255,255,.4); }
   .pct { font-size:16vw; font-weight:900; text-shadow:0 2px 12px rgba(0,0,0,.35); }
   .taps { font-size:6vw; font-weight:700; opacity:.9; margin-top:1vh; }
   .team { font-size:5vw; font-weight:900; letter-spacing:2px; margin-bottom:1vh; }
-  #top { position:fixed; top:0; left:0; right:0; display:flex; justify-content:space-between;
-         padding:2vh 4vw; font-size:4.2vw; font-weight:700; pointer-events:none;
-         text-shadow:0 1px 6px rgba(0,0,0,.6); }
+  #round { position:fixed; top:2vh; left:0; right:0; text-align:center; font-size:4.6vw;
+           font-weight:700; pointer-events:none; text-shadow:0 1px 6px rgba(0,0,0,.6); }
+  #vs { position:fixed; top:8vh; left:50%; transform:translateX(-50%); font-size:7vw;
+        font-weight:900; pointer-events:none; text-shadow:0 2px 8px rgba(0,0,0,.6); }
   #hint { position:fixed; bottom:0; left:0; right:0; text-align:center; padding:2vh;
           font-size:4.5vw; font-weight:700; background:rgba(0,0,0,.55); pointer-events:none; }
-  #leaders { position:fixed; top:9vh; left:0; right:0; display:flex;
+  #leaders { position:fixed; top:16vh; left:0; right:0; display:flex;
              justify-content:space-between; gap:4vw; padding:0 4vw; font-size:4.2vw;
              pointer-events:none; }
   .top3 { background:rgba(0,0,0,.45); border-radius:2vw; padding:1.5vw 3vw;
@@ -42,15 +47,18 @@
 <body>
 <div id="bar">
   <div id="redSide" class="side" style="width:50%">
+    <div class="label">Red</div>
     <div class="team">Type R</div><div class="pct" id="redPct">50%</div>
     <div class="taps">👆 <span id="redTaps">0</span></div>
   </div>
   <div id="yelSide" class="side" style="width:50%">
+    <div class="label">Yellow</div>
     <div class="team">Type Y</div><div class="pct" id="yelPct">50%</div>
     <div class="taps">👆 <span id="yelTaps">0</span></div>
   </div>
 </div>
-<div id="top"><span id="round">Round 1</span><span>🔴 vs 🟡</span></div>
+<div id="round">Round 1</div>
+<div id="vs">VS</div>
 <div id="leaders"><div class="top3" id="topRed"></div><div class="top3" id="topYel"></div></div>
 <div id="hint">Type <b>R</b> in chat for Red, <b>Y</b> for Yellow. Tap as many times as you want!</div>
 <div id="win"><h1 id="winTitle"></h1><p id="winMvp"></p></div>
