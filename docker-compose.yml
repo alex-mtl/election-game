@@ -1,0 +1,13 @@
+services:
+  game:
+    build: .
+    image: election-game
+    container_name: election-game
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: 8765
+    ports:
+      - "${HOST_PORT:-8765}:8765"

@@ -17,6 +17,7 @@ Test:     python tug_of_war.py --simulate   (fake viewers, no TikTok needed)
 
 import argparse
 import json
+import os
 import random
 import re
 import threading
@@ -24,12 +25,14 @@ import time
 from collections import defaultdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-# ---------------- config ----------------
-TIKTOK_USERNAME = "CHANGE_ME"   # <-- put your TikTok @username here (without @)
-STEP_PCT = 1.0                  # screen % gained per tap
-TAP_COOLDOWN_SEC = 1.0          # min seconds between counted taps of one user
-WIN_PAUSE_SEC = 15              # winner banner duration, then next round
-PORT = 8765
+# ---------------- config (overridable via env vars, see .env.example) ----------------
+TIKTOK_USERNAME = os.getenv("TIKTOK_USERNAME", "CHANGE_ME").lstrip("@") or "CHANGE_ME"
+STEP_PCT = float(os.getenv("STEP_PCT", "1.0"))                  # screen % gained per tap
+TAP_COOLDOWN_SEC = float(os.getenv("TAP_COOLDOWN_SEC", "1.0"))  # min seconds between counted taps of one user
+WIN_PAUSE_SEC = float(os.getenv("WIN_PAUSE_SEC", "15"))         # winner banner duration, then next round
+PORT = int(os.getenv("PORT", "8765"))
+SIMULATE = os.getenv("SIMULATE", "").lower() in ("1", "true", "yes")
+GAME_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "game.html")
 
 RED_KEYS = {"r", "red", "красный", "красная", "красные", "к"}
 YELLOW_KEYS = {"y", "yellow", "желтый", "жёлтый", "желтая", "жёлтая",
@@ -147,7 +150,7 @@ class Handler(BaseHTTPRequestHandler):
                         "application/json")
         else:
             try:
-                with open("game.html", "rb") as f:
+                with open(GAME_HTML, "rb") as f:
                     data = f.read()
             except FileNotFoundError:
                 data = b"<h1>game.html not found next to tug_of_war.py</h1>"
@@ -202,11 +205,12 @@ if __name__ == "__main__":
     ap.add_argument("--simulate", action="store_true",
                     help="fake viewers instead of real TikTok comments")
     args = ap.parse_args()
+    simulate = args.simulate or SIMULATE
 
     threading.Thread(target=serve_forever, daemon=True).start()
-    if args.simulate or TIKTOK_USERNAME == "CHANGE_ME":
-        if TIKTOK_USERNAME == "CHANGE_ME" and not args.simulate:
-            print("[warn] set TIKTOK_USERNAME in tug_of_war.py; "
+    if simulate or TIKTOK_USERNAME == "CHANGE_ME":
+        if TIKTOK_USERNAME == "CHANGE_ME" and not simulate:
+            print("[warn] set TIKTOK_USERNAME (in .env); "
                   "running simulator meanwhile")
         threading.Thread(target=simulator, daemon=True).start()
     else:
