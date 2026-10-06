@@ -35,7 +35,6 @@
   .top3 { background:rgba(0,0,0,.45); border-radius:2vw; padding:1.5vw 3vw;
           min-width:38vw; max-width:46vw; color:#fff; }
   .top3:empty { visibility:hidden; }
-  .top3 .h { font-size:3.4vw; font-weight:900; letter-spacing:1px; opacity:.85; margin-bottom:.5vh; }
   .top3 .row { display:flex; justify-content:space-between; gap:2vw; font-weight:700;
                white-space:nowrap; }
   .top3 .row span:first-child { overflow:hidden; text-overflow:ellipsis; }
@@ -72,12 +71,10 @@
 <div id="win"><h1 id="winTitle"></h1><p id="winMvp"></p></div>
 
 <script>
-function renderTop(id, title, list){
+function renderTop(id, list){
   const el = document.getElementById(id);
   el.replaceChildren();
   if (!list.length) return;
-  const h = document.createElement('div'); h.className = 'h'; h.textContent = title;
-  el.appendChild(h);
   list.forEach((t, i) => {
     const row = document.createElement('div'); row.className = 'row';
     const n = document.createElement('span'); n.textContent = (i + 1) + '. ' + t[0];
@@ -95,8 +92,8 @@ async function tick(){
     document.getElementById('redTaps').textContent = s.taps_red;
     document.getElementById('yelTaps').textContent = s.taps_yellow;
     document.getElementById('round').textContent = 'Round ' + s.round;
-    renderTop('topRed', '🔴 TOP 3', s.top_red);
-    renderTop('topYel', '🟡 TOP 3', s.top_yellow);
+    renderTop('topRed', s.top_red);
+    renderTop('topYel', s.top_yellow);
     const w = document.getElementById('win');
     if (s.winner) {
       w.className = 'show ' + (s.winner === 'red' ? 'red' : 'yellow');
