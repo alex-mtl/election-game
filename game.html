@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Перетяжка: красные vs жёлтые</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; overflow:hidden; font-family:Arial,Helvetica,sans-serif;
+              background:#111; color:#fff; -webkit-user-select:none; user-select:none; }
+  #bar { display:flex; height:100vh; width:100vw; }
+  #redSide  { background:linear-gradient(180deg,#e03131,#a61e1e); transition:width .3s; }
+  #yelSide  { background:linear-gradient(180deg,#ffd43b,#e8a90c); transition:width .3s; color:#3a2b00; }
+  .side { display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
+  .pct { font-size:16vw; font-weight:900; text-shadow:0 2px 12px rgba(0,0,0,.35); }
+  .taps { font-size:6vw; font-weight:700; opacity:.9; margin-top:1vh; }
+  .team { font-size:5vw; font-weight:900; letter-spacing:2px; margin-bottom:1vh; }
+  #top { position:fixed; top:0; left:0; right:0; display:flex; justify-content:space-between;
+         padding:2vh 4vw; font-size:4.2vw; font-weight:700; pointer-events:none;
+         text-shadow:0 1px 6px rgba(0,0,0,.6); }
+  #hint { position:fixed; bottom:0; left:0; right:0; text-align:center; padding:2vh;
+          font-size:4.5vw; font-weight:700; background:rgba(0,0,0,.55); pointer-events:none; }
+  #leaders { position:fixed; bottom:11vh; left:0; right:0; display:flex;
+             justify-content:space-between; padding:0 4vw; font-size:3.6vw;
+             pointer-events:none; text-shadow:0 1px 4px rgba(0,0,0,.7); }
+  #win { position:fixed; inset:0; display:none; flex-direction:column; align-items:center;
+         justify-content:center; z-index:10; text-align:center; padding:5vw; }
+  #win.show { display:flex; }
+  #win.red { background:rgba(160,20,20,.94); } #win.yellow { background:rgba(200,150,10,.94); }
+  #win h1 { font-size:11vw; margin-bottom:3vh; }
+  #win p  { font-size:6vw; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <div id="redSide" class="side" style="width:50%">
+    <div class="team">КРАСНЫЕ</div><div class="pct" id="redPct">50%</div>
+    <div class="taps">👆 <span id="redTaps">0</span></div>
+  </div>
+  <div id="yelSide" class="side" style="width:50%">
+    <div class="team">ЖЁЛТЫЕ</div><div class="pct" id="yelPct">50%</div>
+    <div class="taps">👆 <span id="yelTaps">0</span></div>
+  </div>
+</div>
+<div id="top"><span id="round">Раунд 1</span><span>🔴 vs 🟡</span></div>
+<div id="leaders"><span id="topRed"></span><span id="topYel"></span></div>
+<div id="hint">Пиши в чат <b>К</b> — за красных, <b>Ж</b> — за жёлтых. Тапать можно много раз!</div>
+<div id="win"><h1 id="winTitle"></h1><p id="winMvp"></p></div>
+
+<script>
+async function tick(){
+  try {
+    const s = await (await fetch('state.json',{cache:'no-store'})).json();
+    document.getElementById('redSide').style.width = s.red_pct + '%';
+    document.getElementById('yelSide').style.width = s.yellow_pct + '%';
+    document.getElementById('redPct').textContent = s.red_pct + '%';
+    document.getElementById('yelPct').textContent = s.yellow_pct + '%';
+    document.getElementById('redTaps').textContent = s.taps_red;
+    document.getElementById('yelTaps').textContent = s.taps_yellow;
+    document.getElementById('round').textContent = 'Раунд ' + s.round;
+    document.getElementById('topRed').textContent =
+      s.top_red.map(t => '🔴 ' + t[0] + ' (' + t[1] + ')').join('  ');
+    document.getElementById('topYel').textContent =
+      s.top_yellow.map(t => '🟡 ' + t[0] + ' (' + t[1] + ')').join('  ');
+    const w = document.getElementById('win');
+    if (s.winner) {
+      w.className = 'show ' + (s.winner === 'red' ? 'red' : 'yellow');
+      document.getElementById('winTitle').textContent =
+        s.winner === 'red' ? '🏆 ПОБЕДА КРАСНЫХ!' : '🏆 ПОБЕДА ЖЁЛТЫХ!';
+      document.getElementById('winMvp').textContent =
+        s.mvp ? ('MVP: ' + s.mvp + ' — ' + s.mvp_taps + ' тапов') : '';
+    } else { w.className = ''; }
+  } catch(e) { /* сервер недоступен */ }
+}
+setInterval(tick, 500); tick();
+</script>
+</body>
+</html>
