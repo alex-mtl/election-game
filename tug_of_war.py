@@ -45,6 +45,8 @@ class Game:
     def __init__(self):
         self.lock = threading.Lock()
         self.round_no = 1
+        self.names = {}             # user id -> display name (TikTok nickname)
+        self.recruiter = None       # (user, color) of the last R/Y commenter
         self.reset()
 
     def reset(self):
@@ -56,27 +58,50 @@ class Game:
         self.mvp_taps = 0
         self.win_until = 0.0
 
-    def tap(self, user, color, now=None):
+    def _push(self, user, color, now):
+        """Give one point to user on color and move the bar. Lock must be held."""
+        self.taps[user][color] += 1
+        if color == "red":
+            self.red_pct = min(100.0, self.red_pct + STEP_PCT)
+        else:
+            self.red_pct = max(0.0, self.red_pct - STEP_PCT)
+        if self.red_pct >= 100.0:
+            self._finish("red", now)
+        elif self.red_pct <= 0.0:
+            self._finish("yellow", now)
+
+    def tap(self, user, color, name=None, now=None):
         """Register one tap. Returns True if counted."""
         if color not in ("red", "yellow"):
             return False
         now = time.time() if now is None else now
         with self.lock:
+            if name:
+                self.names[user] = name
+            self.recruiter = (user, color)      # next joiners go to this team
             if self.winner:                     # round over, ignore taps
                 return False
             if now - self.last_tap.get(user, 0) < TAP_COOLDOWN_SEC:
                 return False                    # anti-spam cooldown
             self.last_tap[user] = now
-            self.taps[user][color] += 1
-            if color == "red":
-                self.red_pct = min(100.0, self.red_pct + STEP_PCT)
-            else:
-                self.red_pct = max(0.0, self.red_pct - STEP_PCT)
-            if self.red_pct >= 100.0:
-                self._finish("red", now)
-            elif self.red_pct <= 0.0:
-                self._finish("yellow", now)
+            self._push(user, color, now)
             return True
+
+    def join(self, user, now=None):
+        """Viewer joined the LIVE: +1 point to the last R/Y commenter's team,
+        credited to that commenter. Returns (recruiter, color) or None."""
+        now = time.time() if now is None else now
+        with self.lock:
+            if self.winner or not self.recruiter:
+                return None
+            rec, color = self.recruiter
+            if rec == user:
+                return None
+            self._push(rec, color, now)
+            return rec, color
+
+    def name(self, user):
+        return self.names.get(user, user)
 
     def _finish(self, winner, now):
         self.winner = winner
@@ -97,9 +122,9 @@ class Game:
         with self.lock:
             taps_red = sum(t["red"] for t in self.taps.values())
             taps_yellow = sum(t["yellow"] for t in self.taps.values())
-            top_red = sorted(((u, t["red"]) for u, t in self.taps.items()
+            top_red = sorted(((self.name(u), t["red"]) for u, t in self.taps.items()
                               if t["red"]), key=lambda x: -x[1])[:3]
-            top_yellow = sorted(((u, t["yellow"]) for u, t in self.taps.items()
+            top_yellow = sorted(((self.name(u), t["yellow"]) for u, t in self.taps.items()
                                  if t["yellow"]), key=lambda x: -x[1])[:3]
             return {
                 "red_pct": round(self.red_pct, 1),
@@ -110,7 +135,7 @@ class Game:
                 "top_red": top_red,
                 "top_yellow": top_yellow,
                 "winner": self.winner,
-                "mvp": self.mvp,
+                "mvp": self.name(self.mvp) if self.mvp else None,
                 "mvp_taps": self.mvp_taps,
             }
 
@@ -171,9 +196,14 @@ def serve_forever():
 # ---------------- TikTok listener ----------------
 def tiktok_listener():
     from TikTokLive import TikTokLiveClient
-    from TikTokLive.events import CommentEvent, ConnectEvent
+    from TikTokLive.events import CommentEvent, ConnectEvent, JoinEvent
 
     client = TikTokLiveClient(unique_id=TIKTOK_USERNAME)
+
+    def who(u):
+        """(stable user id, display nickname)"""
+        uid = str(getattr(u, "unique_id", None) or getattr(u, "nickname", None) or "anon")
+        return uid, (getattr(u, "nickname", None) or uid)
 
     @client.on(ConnectEvent)
     async def on_connect(event):
@@ -182,14 +212,22 @@ def tiktok_listener():
     @client.on(CommentEvent)
     async def on_comment(event):
         try:
-            user = (getattr(event.user, "unique_id", None)
-                    or getattr(event.user, "nickname", None) or "anon")
+            user, name = who(event.user)
             color = parse_color(getattr(event, "comment", "") or "")
-            if color:
-                if game.tap(str(user), color):
-                    print(f"[tap] {user} -> {color}")
+            if color and game.tap(user, color, name):
+                print(f"[tap] {name} ({user}) -> {color}")
         except Exception as e:  # never kill the listener on a bad comment
             print("[tiktok] handler error:", e)
+
+    @client.on(JoinEvent)
+    async def on_join(event):
+        try:
+            user, name = who(event.user)
+            res = game.join(user)
+            if res:
+                print(f"[join] {name} joined -> +1 {res[1]} for {game.name(res[0])}")
+        except Exception as e:
+            print("[tiktok] join handler error:", e)
 
     print(f"[tiktok] connecting to @{TIKTOK_USERNAME} ...")
     client.run()
@@ -216,8 +254,11 @@ def simulator():
     print("[sim] fake viewers tapping (no TikTok needed)")
     while True:
         time.sleep(random.uniform(0.05, 0.4))
-        game.tap(random.choice(names),
-                 random.choice(["red", "yellow", "red", "yellow", "red"]))
+        if random.random() < 0.15:
+            game.join("guest%d" % random.randint(1, 999))
+        else:
+            game.tap(random.choice(names),
+                     random.choice(["red", "yellow", "red", "yellow", "red"]))
 
 
 # ---------------- main ----------------

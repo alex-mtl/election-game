@@ -21,8 +21,16 @@
   #hint { position:fixed; bottom:0; left:0; right:0; text-align:center; padding:2vh;
           font-size:4.5vw; font-weight:700; background:rgba(0,0,0,.55); pointer-events:none; }
   #leaders { position:fixed; bottom:11vh; left:0; right:0; display:flex;
-             justify-content:space-between; padding:0 4vw; font-size:3.6vw;
-             pointer-events:none; text-shadow:0 1px 4px rgba(0,0,0,.7); }
+             justify-content:space-between; gap:4vw; padding:0 4vw; font-size:4.2vw;
+             pointer-events:none; }
+  .top3 { background:rgba(0,0,0,.45); border-radius:2vw; padding:1.5vw 3vw;
+          min-width:38vw; max-width:46vw; color:#fff; }
+  .top3:empty { visibility:hidden; }
+  .top3 .h { font-size:3.4vw; font-weight:900; letter-spacing:1px; opacity:.85; margin-bottom:.5vh; }
+  .top3 .row { display:flex; justify-content:space-between; gap:2vw; font-weight:700;
+               white-space:nowrap; }
+  .top3 .row span:first-child { overflow:hidden; text-overflow:ellipsis; }
+  #topYel { text-align:right; }
   #win { position:fixed; inset:0; display:none; flex-direction:column; align-items:center;
          justify-content:center; z-index:10; text-align:center; padding:5vw; }
   #win.show { display:flex; }
@@ -43,11 +51,24 @@
   </div>
 </div>
 <div id="top"><span id="round">Round 1</span><span>🔴 vs 🟡</span></div>
-<div id="leaders"><span id="topRed"></span><span id="topYel"></span></div>
+<div id="leaders"><div class="top3" id="topRed"></div><div class="top3" id="topYel"></div></div>
 <div id="hint">Type <b>R</b> in chat for Red, <b>Y</b> for Yellow. Tap as many times as you want!</div>
 <div id="win"><h1 id="winTitle"></h1><p id="winMvp"></p></div>
 
 <script>
+function renderTop(id, title, list){
+  const el = document.getElementById(id);
+  el.replaceChildren();
+  if (!list.length) return;
+  const h = document.createElement('div'); h.className = 'h'; h.textContent = title;
+  el.appendChild(h);
+  list.forEach((t, i) => {
+    const row = document.createElement('div'); row.className = 'row';
+    const n = document.createElement('span'); n.textContent = (i + 1) + '. ' + t[0];
+    const v = document.createElement('span'); v.textContent = t[1];
+    row.append(n, v); el.appendChild(row);
+  });
+}
 async function tick(){
   try {
     const s = await (await fetch('state.json',{cache:'no-store'})).json();
@@ -58,10 +79,8 @@ async function tick(){
     document.getElementById('redTaps').textContent = s.taps_red;
     document.getElementById('yelTaps').textContent = s.taps_yellow;
     document.getElementById('round').textContent = 'Round ' + s.round;
-    document.getElementById('topRed').textContent =
-      s.top_red.map(t => '🔴 ' + t[0] + ' (' + t[1] + ')').join('  ');
-    document.getElementById('topYel').textContent =
-      s.top_yellow.map(t => '🟡 ' + t[0] + ' (' + t[1] + ')').join('  ');
+    renderTop('topRed', '🔴 TOP 3', s.top_red);
+    renderTop('topYel', '🟡 TOP 3', s.top_yellow);
     const w = document.getElementById('win');
     if (s.winner) {
       w.className = 'show ' + (s.winner === 'red' ? 'red' : 'yellow');
