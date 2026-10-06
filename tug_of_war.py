@@ -200,6 +200,16 @@ def tiktok_listener():
 
     client = TikTokLiveClient(unique_id=TIKTOK_USERNAME)
 
+    started_at = time.time()
+
+    def is_old(event):
+        """On connect TikTok replays recent chat history - skip anything sent
+        before we started listening (small margin for clock skew)."""
+        ct = getattr(getattr(event, "common", None), "create_time", 0) or 0
+        if ct > 1e12:               # milliseconds
+            ct /= 1000
+        return bool(ct) and ct < started_at - 3
+
     def who(u):
         """(stable user id, display nickname)"""
         uid = str(getattr(u, "unique_id", None) or getattr(u, "nickname", None) or "anon")
@@ -214,6 +224,9 @@ def tiktok_listener():
         try:
             user, name = who(event.user)
             color = parse_color(getattr(event, "comment", "") or "")
+            if color and is_old(event):
+                print(f"[skip] old comment from {name} ({color}) sent before connect")
+                return
             if color and game.tap(user, color, name):
                 print(f"[tap] {name} ({user}) -> {color}")
         except Exception as e:  # never kill the listener on a bad comment
@@ -222,6 +235,8 @@ def tiktok_listener():
     @client.on(JoinEvent)
     async def on_join(event):
         try:
+            if is_old(event):
+                return
             user, name = who(event.user)
             res = game.join(user)
             if res:
