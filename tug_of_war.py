@@ -20,6 +20,7 @@ import json
 import os
 import random
 import re
+import signal
 import threading
 import time
 from collections import defaultdict
@@ -33,6 +34,7 @@ WIN_PAUSE_SEC = float(os.getenv("WIN_PAUSE_SEC", "15"))         # winner banner 
 PORT = int(os.getenv("PORT", "8765"))
 RECONNECT_SEC = float(os.getenv("RECONNECT_SEC", "15"))        # retry delay while offline / after drop
 SIMULATE = os.getenv("SIMULATE", "").lower() in ("1", "true", "yes")
+STATE_FILE = os.getenv("STATE_FILE", "state.json")             # score survives restarts; delete to reset
 GAME_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "game.html")
 
 RED_KEYS = {"r", "red", "красный", "красная", "красные", "к"}
@@ -48,6 +50,35 @@ class Game:
         self.names = {}             # user id -> display name (TikTok nickname)
         self.recruiter = None       # (user, color) of the last R/Y commenter
         self.reset()
+
+    def to_dict(self):
+        with self.lock:
+            return {
+                "round_no": self.round_no,
+                "names": self.names,
+                "recruiter": self.recruiter,
+                "red_pct": self.red_pct,
+                "taps": dict(self.taps),
+                "winner": self.winner,
+                "mvp": self.mvp,
+                "mvp_taps": self.mvp_taps,
+                "win_until": self.win_until,
+            }
+
+    def load(self, d):
+        with self.lock:
+            self.round_no = d.get("round_no", 1)
+            self.names = d.get("names", {})
+            rec = d.get("recruiter")
+            self.recruiter = tuple(rec) if rec else None
+            self.red_pct = d.get("red_pct", 50.0)
+            self.taps.clear()
+            for user, t in d.get("taps", {}).items():
+                self.taps[user].update(t)
+            self.winner = d.get("winner")
+            self.mvp = d.get("mvp")
+            self.mvp_taps = d.get("mvp_taps", 0)
+            self.win_until = d.get("win_until", 0.0)
 
     def reset(self):
         self.red_pct = 50.0
@@ -141,6 +172,43 @@ class Game:
 
 
 game = Game()
+
+
+# ---------------- persistence ----------------
+_last_saved = None
+
+
+def load_state():
+    try:
+        with open(STATE_FILE, encoding="utf-8") as f:
+            game.load(json.load(f))
+        print(f"[state] restored round {game.round_no}, red {game.red_pct}% from {STATE_FILE}")
+    except FileNotFoundError:
+        print(f"[state] no {STATE_FILE}, starting fresh")
+    except Exception as e:
+        print(f"[state] can't read {STATE_FILE} ({e}), starting fresh")
+
+
+def save_state():
+    """Write state atomically if it changed since the last save."""
+    global _last_saved
+    data = json.dumps(game.to_dict(), ensure_ascii=False)
+    if data == _last_saved:
+        return
+    tmp = STATE_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(data)
+    os.replace(tmp, STATE_FILE)
+    _last_saved = data
+
+
+def saver():
+    while True:
+        time.sleep(1)
+        try:
+            save_state()
+        except Exception as e:
+            print("[state] save error:", e)
 
 
 def parse_color(comment):
@@ -284,6 +352,10 @@ if __name__ == "__main__":
     args = ap.parse_args()
     simulate = args.simulate or SIMULATE
 
+    # docker stop sends SIGTERM: turn it into a clean exit so the score gets saved
+    signal.signal(signal.SIGTERM, lambda *a: (_ for _ in ()).throw(KeyboardInterrupt))
+    load_state()
+    threading.Thread(target=saver, daemon=True).start()
     threading.Thread(target=serve_forever, daemon=True).start()
     if simulate or TIKTOK_USERNAME == "CHANGE_ME":
         if TIKTOK_USERNAME == "CHANGE_ME" and not simulate:
@@ -298,4 +370,5 @@ if __name__ == "__main__":
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\nstopped.")
+        save_state()
+        print("\nstopped, score saved.")

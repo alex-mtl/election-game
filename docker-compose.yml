@@ -9,5 +9,8 @@ services:
         required: false
     environment:
       PORT: 8765
+      STATE_FILE: /data/state.json
+    volumes:
+      - ./data:/data
     ports:
       - "${HOST_PORT:-8765}:8765"
