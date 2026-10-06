@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Перетяжка: красные vs жёлтые</title>
+<title>Tug of War: Red vs Yellow</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { height:100%; overflow:hidden; font-family:Arial,Helvetica,sans-serif;
@@ -34,17 +34,17 @@
 <body>
 <div id="bar">
   <div id="redSide" class="side" style="width:50%">
-    <div class="team">КРАСНЫЕ</div><div class="pct" id="redPct">50%</div>
+    <div class="team">Type R</div><div class="pct" id="redPct">50%</div>
     <div class="taps">👆 <span id="redTaps">0</span></div>
   </div>
   <div id="yelSide" class="side" style="width:50%">
-    <div class="team">ЖЁЛТЫЕ</div><div class="pct" id="yelPct">50%</div>
+    <div class="team">Type Y</div><div class="pct" id="yelPct">50%</div>
     <div class="taps">👆 <span id="yelTaps">0</span></div>
   </div>
 </div>
-<div id="top"><span id="round">Раунд 1</span><span>🔴 vs 🟡</span></div>
+<div id="top"><span id="round">Round 1</span><span>🔴 vs 🟡</span></div>
 <div id="leaders"><span id="topRed"></span><span id="topYel"></span></div>
-<div id="hint">Пиши в чат <b>К</b> — за красных, <b>Ж</b> — за жёлтых. Тапать можно много раз!</div>
+<div id="hint">Type <b>R</b> in chat for Red, <b>Y</b> for Yellow. Tap as many times as you want!</div>
 <div id="win"><h1 id="winTitle"></h1><p id="winMvp"></p></div>
 
 <script>
@@ -57,7 +57,7 @@ async function tick(){
     document.getElementById('yelPct').textContent = s.yellow_pct + '%';
     document.getElementById('redTaps').textContent = s.taps_red;
     document.getElementById('yelTaps').textContent = s.taps_yellow;
-    document.getElementById('round').textContent = 'Раунд ' + s.round;
+    document.getElementById('round').textContent = 'Round ' + s.round;
     document.getElementById('topRed').textContent =
       s.top_red.map(t => '🔴 ' + t[0] + ' (' + t[1] + ')').join('  ');
     document.getElementById('topYel').textContent =
@@ -66,11 +66,11 @@ async function tick(){
     if (s.winner) {
       w.className = 'show ' + (s.winner === 'red' ? 'red' : 'yellow');
       document.getElementById('winTitle').textContent =
-        s.winner === 'red' ? '🏆 ПОБЕДА КРАСНЫХ!' : '🏆 ПОБЕДА ЖЁЛТЫХ!';
+        s.winner === 'red' ? '🏆 RED WINS!' : '🏆 YELLOW WINS!';
       document.getElementById('winMvp').textContent =
-        s.mvp ? ('MVP: ' + s.mvp + ' — ' + s.mvp_taps + ' тапов') : '';
+        s.mvp ? ('MVP: ' + s.mvp + ' — ' + s.mvp_taps + ' taps') : '';
     } else { w.className = ''; }
-  } catch(e) { /* сервер недоступен */ }
+  } catch(e) { /* server unreachable */ }
 }
 setInterval(tick, 500); tick();
 </script>
