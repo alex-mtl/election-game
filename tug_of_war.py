@@ -31,6 +31,7 @@ STEP_PCT = float(os.getenv("STEP_PCT", "1.0"))                  # screen % gaine
 TAP_COOLDOWN_SEC = float(os.getenv("TAP_COOLDOWN_SEC", "1.0"))  # min seconds between counted taps of one user
 WIN_PAUSE_SEC = float(os.getenv("WIN_PAUSE_SEC", "15"))         # winner banner duration, then next round
 PORT = int(os.getenv("PORT", "8765"))
+RECONNECT_SEC = float(os.getenv("RECONNECT_SEC", "15"))        # retry delay while offline / after drop
 SIMULATE = os.getenv("SIMULATE", "").lower() in ("1", "true", "yes")
 GAME_HTML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "game.html")
 
@@ -170,9 +171,13 @@ def serve_forever():
 # ---------------- TikTok listener ----------------
 def tiktok_listener():
     from TikTokLive import TikTokLiveClient
-    from TikTokLive.events import CommentEvent
+    from TikTokLive.events import CommentEvent, ConnectEvent
 
     client = TikTokLiveClient(unique_id=TIKTOK_USERNAME)
+
+    @client.on(ConnectEvent)
+    async def on_connect(event):
+        print(f"[tiktok] connected to @{TIKTOK_USERNAME} LIVE, listening to chat")
 
     @client.on(CommentEvent)
     async def on_comment(event):
@@ -181,12 +186,28 @@ def tiktok_listener():
                     or getattr(event.user, "nickname", None) or "anon")
             color = parse_color(getattr(event, "comment", "") or "")
             if color:
-                game.tap(str(user), color)
+                if game.tap(str(user), color):
+                    print(f"[tap] {user} -> {color}")
         except Exception as e:  # never kill the listener on a bad comment
             print("[tiktok] handler error:", e)
 
     print(f"[tiktok] connecting to @{TIKTOK_USERNAME} ...")
     client.run()
+
+
+def tiktok_listener_forever():
+    """Keep (re)connecting: waits for the LIVE to start, reconnects on drops."""
+    from TikTokLive.client.errors import UserOfflineError
+    while True:
+        try:
+            tiktok_listener()
+            print("[tiktok] disconnected")
+        except UserOfflineError:
+            print(f"[tiktok] @{TIKTOK_USERNAME} is not live yet, "
+                  f"retry in {RECONNECT_SEC:.0f}s")
+        except Exception as e:
+            print(f"[tiktok] error: {type(e).__name__}: {e}")
+        time.sleep(RECONNECT_SEC)
 
 
 # ---------------- fake viewers (offline test) ----------------
@@ -214,7 +235,7 @@ if __name__ == "__main__":
                   "running simulator meanwhile")
         threading.Thread(target=simulator, daemon=True).start()
     else:
-        threading.Thread(target=tiktok_listener, daemon=True).start()
+        threading.Thread(target=tiktok_listener_forever, daemon=True).start()
 
     print("[game] tug-of-war running. Ctrl+C to stop.")
     try:
