@@ -23,8 +23,9 @@ import re
 import signal
 import threading
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlparse
 
 # ---------------- config (overridable via env vars, see .env.example) ----------------
 TIKTOK_USERNAME = os.getenv("TIKTOK_USERNAME", "CHANGE_ME").lstrip("@") or "CHANGE_ME"
@@ -49,7 +50,15 @@ class Game:
         self.round_no = 1
         self.names = {}             # user id -> display name (TikTok nickname)
         self.recruiter = None       # (user, color) of the last R/Y commenter
+        self.events = deque(maxlen=100)  # recent events for page sounds/voice
+        self.seq = 0
         self.reset()
+
+    def _event(self, **ev):
+        """Append an event for the page (sounds / voice). Lock must be held."""
+        self.seq += 1
+        ev["seq"] = self.seq
+        self.events.append(ev)
 
     def to_dict(self):
         with self.lock:
@@ -115,10 +124,11 @@ class Game:
             if now - self.last_tap.get(user, 0) < TAP_COOLDOWN_SEC:
                 return False                    # anti-spam cooldown
             self.last_tap[user] = now
+            self._event(type="tap", color=color, name=self.name(user))
             self._push(user, color, now)
             return True
 
-    def join(self, user, now=None):
+    def join(self, user, name=None, now=None):
         """Viewer joined the LIVE: +1 point to the last R/Y commenter's team,
         credited to that commenter. Returns (recruiter, color) or None."""
         now = time.time() if now is None else now
@@ -128,6 +138,8 @@ class Game:
             rec, color = self.recruiter
             if rec == user:
                 return None
+            self._event(type="join", color=color, name=name or user,
+                        by=self.name(rec))
             self._push(rec, color, now)
             return rec, color
 
@@ -142,14 +154,17 @@ class Game:
                 best, best_n = user, t[winner]
         self.mvp, self.mvp_taps = best, best_n
         self.win_until = now + WIN_PAUSE_SEC
+        self._event(type="win", color=winner,
+                    name=self.name(best) if best else None)
 
     def maybe_next_round(self):
         with self.lock:
             if self.winner and time.time() >= self.win_until:
                 self.round_no += 1
                 self.reset()
+                self._event(type="round", round=self.round_no)
 
-    def snapshot(self):
+    def snapshot(self, since=0):
         with self.lock:
             taps_red = sum(t["red"] for t in self.taps.values())
             taps_yellow = sum(t["yellow"] for t in self.taps.values())
@@ -168,6 +183,8 @@ class Game:
                 "winner": self.winner,
                 "mvp": self.name(self.mvp) if self.mvp else None,
                 "mvp_taps": self.mvp_taps,
+                "seq": self.seq,
+                "events": [e for e in self.events if e["seq"] > since],
             }
 
 
@@ -239,8 +256,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         game.maybe_next_round()
-        if self.path == "/state.json":
-            self._send(json.dumps(game.snapshot(), ensure_ascii=False),
+        url = urlparse(self.path)
+        if url.path == "/state.json":
+            try:
+                since = int(parse_qs(url.query).get("since", ["0"])[0])
+            except ValueError:
+                since = 0
+            self._send(json.dumps(game.snapshot(since), ensure_ascii=False),
                         "application/json")
         else:
             try:
@@ -306,7 +328,7 @@ def tiktok_listener():
             if is_old(event):
                 return
             user, name = who(event.user)
-            res = game.join(user)
+            res = game.join(user, name)
             if res:
                 print(f"[join] {name} joined -> +1 {res[1]} for {game.name(res[0])}")
         except Exception as e:

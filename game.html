@@ -45,6 +45,14 @@
   #win.red { background:rgba(160,20,20,.94); } #win.yellow { background:rgba(200,150,10,.94); }
   #win h1 { font-size:11vw; margin-bottom:3vh; }
   #win p  { font-size:6vw; }
+  #sound { position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+           background:rgba(0,0,0,.6); cursor:pointer; }
+  #sound button { font:900 5vw Arial,sans-serif; padding:3vw 6vw; border:0; border-radius:3vw;
+                  background:#fff; color:#111; cursor:pointer; }
+  #sound.off { display:none; }
+  #mute { position:fixed; right:1.5vw; bottom:12vh; z-index:15; font-size:4vw; opacity:.35;
+          background:none; border:0; cursor:pointer; }
+  #mute:hover { opacity:1; }
 </style>
 </head>
 <body>
@@ -69,6 +77,8 @@
 <div id="leaders"><div class="top3" id="topRed"></div><div class="top3" id="topYel"></div></div>
 <div id="hint">Type <b>R</b> in chat for Red, <b>Y</b> for Yellow. Tap as many times as you want!</div>
 <div id="win"><h1 id="winTitle"></h1><p id="winMvp"></p></div>
+<div id="sound"><button>🔊 Click to enable sound</button></div>
+<button id="mute" title="Sound on/off">🔊</button>
 
 <script>
 function renderTop(id, list){
@@ -82,9 +92,131 @@ function renderTop(id, list){
     row.append(n, v); el.appendChild(row);
   });
 }
+// ---------------- sound effects (Web Audio, no files) ----------------
+let ctx = null, muted = false, lastFx = 0;
+const qs = new URLSearchParams(location.search);
+try { muted = localStorage.getItem('muted') === '1'; } catch(e) {}
+if (qs.get('sound') === '0') muted = true;
+
+function tone(freq, t0, dur, type, vol, freqEnd){
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t0);
+  if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(ctx.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+}
+function noise(t0, dur, vol){
+  const b = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+  const s = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+  f.type = 'highpass'; f.frequency.value = 1500; g.gain.value = vol;
+  s.buffer = b; s.connect(f).connect(g).connect(ctx.destination); s.start(t0);
+}
+const FX = {
+  tap(color){            // punchy "pow": red = low, yellow = high
+    const t = ctx.currentTime, base = color === 'red' ? 220 : 440;
+    tone(base, t, 0.18, 'square', 0.18, base * 2.5);
+    tone(base * 1.5, t + 0.05, 0.15, 'triangle', 0.15, base * 3);
+    noise(t, 0.06, 0.25);
+  },
+  join(color){           // sparkle arpeggio
+    const t = ctx.currentTime, base = color === 'red' ? 523 : 659;
+    [1, 1.25, 1.5, 2].forEach((m, i) => tone(base * m, t + i * 0.06, 0.25, 'sine', 0.2));
+  },
+  win(){                 // fanfare
+    const t = ctx.currentTime;
+    [[523,0],[659,.15],[784,.3],[1047,.45]].forEach(([f, d]) => {
+      tone(f, t + d, 0.35, 'square', 0.15); tone(f / 2, t + d, 0.35, 'triangle', 0.2);
+    });
+    [523, 659, 784, 1047].forEach(f => tone(f, t + 0.65, 1.4, 'sawtooth', 0.07));
+    noise(t + 0.65, 0.5, 0.3);
+  },
+  round(){               // "ready, go" beeps
+    const t = ctx.currentTime;
+    tone(440, t, 0.15, 'square', 0.15); tone(440, t + 0.3, 0.15, 'square', 0.15);
+    tone(880, t + 0.6, 0.4, 'square', 0.18);
+  },
+};
+function fx(kind, color){
+  if (!ctx || muted) return;
+  const now = performance.now();
+  if ((kind === 'tap' || kind === 'join') && now - lastFx < 70) return;  // don't machine-gun
+  lastFx = now;
+  FX[kind](color);
+}
+
+// ---------------- voice (browser speech synthesis) ----------------
+const synth = window.speechSynthesis;
+let voice = null, pending = [];
+function pickVoice(){
+  const vs = synth ? synth.getVoices() : [];
+  voice = vs.find(v => /en-US/i.test(v.lang) && /google|aria|jenny|guy|natural/i.test(v.name))
+       || vs.find(v => /^en/i.test(v.lang)) || null;
+}
+if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
+const cleanName = n => (n || '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim() || 'Someone';
+const teamName = c => c === 'red' ? 'Red' : 'Yellow';
+
+function say(text, urgent){
+  if (!synth || !ctx || muted) return;
+  if (urgent) { synth.cancel(); pending = []; }
+  const u = new SpeechSynthesisUtterance(text);
+  if (voice) u.voice = voice;
+  u.lang = 'en-US'; u.rate = 1.15; u.pitch = 1.1; u.volume = 1;
+  u.onend = flush;
+  synth.speak(u);
+}
+// taps/joins pile up while speaking -> next phrase summarizes them
+function flush(){
+  if (!synth || synth.speaking || !pending.length) return;
+  const evs = pending; pending = [];
+  if (evs.length === 1) {
+    const e = evs[0];
+    say(e.type === 'join' ? cleanName(e.name) + ' joins ' + teamName(e.color) + '!'
+                          : cleanName(e.name) + ', ' + teamName(e.color) + '!');
+  } else {
+    const r = evs.filter(e => e.color === 'red').length, y = evs.length - r;
+    say([r && 'Red plus ' + r, y && 'Yellow plus ' + y].filter(Boolean).join(', ') + '!');
+  }
+}
+setInterval(flush, 300);
+
+function handleEvent(e){
+  if (e.type === 'tap' || e.type === 'join') { fx(e.type, e.color); pending.push(e); flush(); }
+  else if (e.type === 'win') {
+    fx('win');
+    say(teamName(e.color) + ' wins!' + (e.name ? ' MVP: ' + cleanName(e.name) + '!' : ''), true);
+  } else if (e.type === 'round') { fx('round'); say('Round ' + e.round + '. Go!', true); }
+}
+
+// ---------------- sound on/off ----------------
+const soundEl = document.getElementById('sound'), muteEl = document.getElementById('mute');
+function setMuted(m){
+  muted = m; muteEl.textContent = m ? '🔇' : '🔊';
+  try { localStorage.setItem('muted', m ? '1' : '0'); } catch(e) {}
+  if (m && synth) { synth.cancel(); pending = []; }
+}
+function enableSound(){
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  ctx.resume(); soundEl.className = 'off';
+}
+soundEl.onclick = () => { enableSound(); setMuted(false); say('Sound on. Let\'s play!'); };
+muteEl.onclick = () => { enableSound(); setMuted(!muted); };
+setMuted(muted);
+if (muted) soundEl.className = 'off';
+
+// ---------------- polling ----------------
+let lastSeq = null;
 async function tick(){
   try {
-    const s = await (await fetch('state.json',{cache:'no-store'})).json();
+    const s = await (await fetch('state.json?since=' + (lastSeq || 0), {cache:'no-store'})).json();
+    if (lastSeq === null || s.seq < lastSeq) lastSeq = s.seq;   // first load / server restart: no replay
+    else {
+      s.events.filter(e => e.seq > lastSeq).forEach(handleEvent);
+      lastSeq = s.seq;
+    }
     document.getElementById('redSide').style.width = s.red_pct + '%';
     document.getElementById('yelSide').style.width = s.yellow_pct + '%';
     document.getElementById('redPct').textContent = s.red_pct + '%';
