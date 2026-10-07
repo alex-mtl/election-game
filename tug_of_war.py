@@ -16,6 +16,7 @@ Test:     python tug_of_war.py --simulate   (fake viewers, no TikTok needed)
 """
 
 import argparse
+import asyncio
 import json
 import os
 import random
@@ -50,6 +51,7 @@ class Game:
         self.round_no = 1
         self.names = {}             # user id -> display name (TikTok nickname)
         self.recruiter = None       # (user, color) of the last R/Y commenter
+        self.room_id = None         # TikTok LIVE room; a new one = new stream = fresh game
         self.events = deque(maxlen=100)  # recent events for page sounds/voice
         self.seq = 0
         self.reset()
@@ -73,6 +75,7 @@ class Game:
                 "mvp_taps": self.mvp_taps,
                 "win_until": self.win_until,
                 "leader": self.leader,
+                "room_id": self.room_id,
             }
 
     def load(self, d):
@@ -90,6 +93,17 @@ class Game:
             self.mvp_taps = d.get("mvp_taps", 0)
             self.win_until = d.get("win_until", 0.0)
             self.leader = d.get("leader", {"red": None, "yellow": None})
+            self.room_id = d.get("room_id")
+
+    def full_reset(self, room_id=None):
+        """Brand new game: round 1, no scores, no names (new LIVE or manual reset)."""
+        with self.lock:
+            self.round_no = 1
+            self.names = {}
+            self.recruiter = None
+            self.room_id = room_id
+            self.reset()
+            self._event(type="round", round=1)
 
     def reset(self):
         self.red_pct = 50.0
@@ -286,6 +300,14 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(data)
 
+    def do_POST(self):
+        if urlparse(self.path).path == "/reset":     # manual: curl -X POST localhost:8765/reset
+            game.full_reset(game.room_id)
+            print("[game] manual reset -> score 0")
+            self._send('{"ok": true}', "application/json")
+        else:
+            self.send_error(404)
+
 
 def serve_forever():
     srv = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
@@ -318,6 +340,10 @@ def tiktok_listener():
     @client.on(ConnectEvent)
     async def on_connect(event):
         print(f"[tiktok] connected to @{TIKTOK_USERNAME} LIVE, listening to chat")
+        rid = str(getattr(client, "room_id", None) or "")
+        if rid and rid != str(game.room_id or ""):
+            game.full_reset(rid)
+            print(f"[game] new LIVE (room {rid}) -> score reset to 0")
 
     @client.on(CommentEvent)
     async def on_comment(event):
@@ -344,8 +370,19 @@ def tiktok_listener():
         except Exception as e:
             print("[tiktok] join handler error:", e)
 
-    print(f"[tiktok] connecting to @{TIKTOK_USERNAME} ...")
-    client.run()
+    async def main():
+        # TikTok often blocks the profile-HTML lookup the library uses by default
+        # ("you might be blocked") and it then reports the user as offline;
+        # the API lookup still works, so resolve the room id there first.
+        rid = None
+        try:
+            rid = await client.web.fetch_room_id_from_api(TIKTOK_USERNAME)
+        except Exception as e:
+            print(f"[tiktok] room id via API failed ({type(e).__name__}), trying HTML")
+        print(f"[tiktok] connecting to @{TIKTOK_USERNAME} (room {rid or '?'}) ...")
+        await client.connect(room_id=rid)
+
+    asyncio.run(main())
 
 
 def tiktok_listener_forever():
