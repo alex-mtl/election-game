@@ -155,10 +155,24 @@ function fx(kind, color){
 // ---------------- voice (browser speech synthesis) ----------------
 const synth = window.speechSynthesis;
 let voice = null, pending = [];
+// Female voice with a Chinese-speaker accent. Best ones are Edge's online voices:
+// Yan (English, Hong Kong), Luna (English, Singapore), Xiaoxiao (Chinese reading English).
+// Fallback: any female English voice. Override: ?voice=<part of voice name>.
+const VOICE_PREFS = [
+  v => /yan/i.test(v.name) && /en-HK/i.test(v.lang),
+  v => /en-HK/i.test(v.lang) && !/sam/i.test(v.name),
+  v => /luna/i.test(v.name) && /en-SG/i.test(v.lang),
+  v => /xiaoxiao|xiaoyi/i.test(v.name),
+  v => /zh-(CN|TW|HK)/i.test(v.lang) && /huihui|hsiaochen|hsiaoyu|hiugaai|tracy|yaoyao/i.test(v.name),
+  v => /^en/i.test(v.lang) && /aria|jenny|ava|emma|michelle|zira|linda|hazel|susan|female|samantha/i.test(v.name),
+  v => /^en/i.test(v.lang),
+];
 function pickVoice(){
   const vs = synth ? synth.getVoices() : [];
-  voice = vs.find(v => /en-US/i.test(v.lang) && /google|aria|jenny|guy|natural/i.test(v.name))
-       || vs.find(v => /^en/i.test(v.lang)) || null;
+  const want = qs.get('voice');
+  voice = (want && vs.find(v => v.name.toLowerCase().includes(want.toLowerCase()))) || null;
+  for (const pref of VOICE_PREFS) { if (voice) break; voice = vs.find(pref) || null; }
+  if (voice) console.log('[voice]', voice.name, voice.lang);
 }
 if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
 const cleanName = n => (n || '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim() || 'Someone';
@@ -170,8 +184,8 @@ function say(text, urgent, excited){
   if (urgent) { synth.cancel(); pending = []; }
   const u = new SpeechSynthesisUtterance(text);
   if (voice) u.voice = voice;
-  u.lang = 'en-US'; u.volume = 1;
-  u.rate = excited ? 1.25 : 1.1; u.pitch = excited ? 1.5 : 1.1;
+  u.lang = voice ? voice.lang : 'en-US'; u.volume = 1;
+  u.rate = excited ? 1.2 : 1.05; u.pitch = excited ? 1.35 : 1.05;
   u.onend = flush;
   synth.speak(u);
 }
