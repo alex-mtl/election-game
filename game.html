@@ -159,27 +159,32 @@ if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
 const cleanName = n => (n || '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim() || 'Someone';
 const teamName = c => c === 'red' ? 'Red' : 'Yellow';
 
-function say(text, urgent){
+// excited = higher pitch, faster: the closest to "!" intonation speech synthesis allows
+function say(text, urgent, excited){
   if (!synth || !ctx || muted) return;
   if (urgent) { synth.cancel(); pending = []; }
   const u = new SpeechSynthesisUtterance(text);
   if (voice) u.voice = voice;
-  u.lang = 'en-US'; u.rate = 1.15; u.pitch = 1.1; u.volume = 1;
+  u.lang = 'en-US'; u.volume = 1;
+  u.rate = excited ? 1.25 : 1.1; u.pitch = excited ? 1.5 : 1.1;
   u.onend = flush;
   synth.speak(u);
 }
+// "Yellow team scores, thanks to <who typed / who joined>!"
+// + for joins: "But the point goes to <last R/Y commenter>!"
+function announce(e){
+  say(teamName(e.color) + ' team scores, thanks to ' + cleanName(e.name) + '!');
+  if (e.type === 'join') say('But the point goes to ' + cleanName(e.by) + '!', false, true);
+}
 // taps/joins pile up while speaking -> next phrase summarizes them
 function flush(){
-  if (!synth || synth.speaking || !pending.length) return;
+  if (!synth || synth.speaking || synth.pending || !pending.length) return;
   const evs = pending; pending = [];
-  if (evs.length === 1) {
-    const e = evs[0];
-    say(e.type === 'join' ? cleanName(e.name) + ' joins ' + teamName(e.color) + '!'
-                          : cleanName(e.name) + ', ' + teamName(e.color) + '!');
-  } else {
-    const r = evs.filter(e => e.color === 'red').length, y = evs.length - r;
-    say([r && 'Red plus ' + r, y && 'Yellow plus ' + y].filter(Boolean).join(', ') + '!');
-  }
+  if (evs.length === 1) return announce(evs[0]);
+  const r = evs.filter(e => e.color === 'red').length, y = evs.length - r;
+  const pts = n => n + (n === 1 ? ' point' : ' points');
+  say([r && 'Red team scores ' + pts(r), y && 'Yellow team scores ' + pts(y)]
+      .filter(Boolean).join('! ') + '!', false, true);
 }
 setInterval(flush, 300);
 
