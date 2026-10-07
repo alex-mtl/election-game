@@ -125,6 +125,11 @@ const FX = {
     const t = ctx.currentTime, base = color === 'red' ? 523 : 659;
     [1, 1.25, 1.5, 2].forEach((m, i) => tone(base * m, t + i * 0.06, 0.25, 'sine', 0.2));
   },
+  lead(color){           // rising "whoosh" + double ding
+    const t = ctx.currentTime, base = color === 'red' ? 392 : 494;
+    tone(base / 2, t, 0.35, 'sawtooth', 0.08, base * 2);
+    tone(base * 2, t + 0.3, 0.2, 'sine', 0.22); tone(base * 3, t + 0.42, 0.35, 'sine', 0.2);
+  },
   win(){                 // fanfare
     const t = ctx.currentTime;
     [[523,0],[659,.15],[784,.3],[1047,.45]].forEach(([f, d]) => {
@@ -176,20 +181,31 @@ function announce(e){
   say(teamName(e.color) + ' team scores, thanks to ' + cleanName(e.name) + '!');
   if (e.type === 'join') say('But the point goes to ' + cleanName(e.by) + '!', false, true);
 }
-// taps/joins pile up while speaking -> next phrase summarizes them
+// leader change inside a team, sports-commentary style
+function announceLead(e){
+  say(cleanName(e.name) + ' takes the lead for Team ' + teamName(e.color) + '!', false, true);
+  say(cleanName(e.prev) + ' drops to second!');
+}
+// taps/joins pile up while speaking -> next phrase summarizes them;
+// leader changes are never merged (only the latest per team is kept)
+let leads = {};
 function flush(){
-  if (!synth || synth.speaking || synth.pending || !pending.length) return;
+  if (!synth || synth.speaking || synth.pending) return;
   const evs = pending; pending = [];
-  if (evs.length === 1) return announce(evs[0]);
-  const r = evs.filter(e => e.color === 'red').length, y = evs.length - r;
-  const pts = n => n + (n === 1 ? ' point' : ' points');
-  say([r && 'Red team scores ' + pts(r), y && 'Yellow team scores ' + pts(y)]
-      .filter(Boolean).join('! ') + '!', false, true);
+  if (evs.length === 1) announce(evs[0]);
+  else if (evs.length > 1) {
+    const r = evs.filter(e => e.color === 'red').length, y = evs.length - r;
+    const pts = n => n + (n === 1 ? ' point' : ' points');
+    say([r && 'Red team scores ' + pts(r), y && 'Yellow team scores ' + pts(y)]
+        .filter(Boolean).join('! ') + '!', false, true);
+  }
+  Object.values(leads).forEach(announceLead); leads = {};
 }
 setInterval(flush, 300);
 
 function handleEvent(e){
   if (e.type === 'tap' || e.type === 'join') { fx(e.type, e.color); pending.push(e); flush(); }
+  else if (e.type === 'lead') { fx('lead', e.color); leads[e.color] = e; flush(); }
   else if (e.type === 'win') {
     fx('win');
     say(teamName(e.color) + ' wins!' + (e.name ? ' MVP: ' + cleanName(e.name) + '!' : ''), true);

@@ -72,6 +72,7 @@ class Game:
                 "mvp": self.mvp,
                 "mvp_taps": self.mvp_taps,
                 "win_until": self.win_until,
+                "leader": self.leader,
             }
 
     def load(self, d):
@@ -88,6 +89,7 @@ class Game:
             self.mvp = d.get("mvp")
             self.mvp_taps = d.get("mvp_taps", 0)
             self.win_until = d.get("win_until", 0.0)
+            self.leader = d.get("leader", {"red": None, "yellow": None})
 
     def reset(self):
         self.red_pct = 50.0
@@ -97,10 +99,18 @@ class Game:
         self.mvp = None
         self.mvp_taps = 0
         self.win_until = 0.0
+        self.leader = {"red": None, "yellow": None}   # current #1 of each team
 
     def _push(self, user, color, now):
         """Give one point to user on color and move the bar. Lock must be held."""
         self.taps[user][color] += 1
+        cur = self.leader[color]
+        if cur is None:
+            self.leader[color] = user
+        elif cur != user and self.taps[user][color] > self.taps[cur][color]:
+            self.leader[color] = user
+            self._event(type="lead", color=color, name=self.name(user),
+                        prev=self.name(cur))
         if color == "red":
             self.red_pct = min(100.0, self.red_pct + STEP_PCT)
         else:
