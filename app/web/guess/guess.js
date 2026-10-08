@@ -103,7 +103,7 @@
   function onEvent(e) {
     const name = clean(e.name);
     switch (e.type) {
-      case 'guess': fx('guess', tKey(e.temp)); break;
+      case 'guess': fx('guess', tKey(e.temp)); addFresh(e); break;
       case 'new_leader':
         fx('leader');
         toast(e.comeback ? '↩ COMEBACK!' : '🔥 NEW LEADER!', name.toUpperCase() + ' — #' + fmt(e.rank), 'var(--magenta)', { important: true });
@@ -202,20 +202,37 @@
     return row;
   }
 
-  // latest guess pinned on top (highlighted), then the closest words sorted by rank —
-  // good guesses stay on screen instead of scrolling away
-  function renderGuesses(latest, best) {
+  // Closest words sorted by rank: a good guess stays on top until someone beats it.
+  // A brand-new guess is shown on top for FRESH_MS ("NEW"), then drops to its place by rank
+  // (or leaves the list if it isn't among the best).
+  const FRESH_MS = 5000, MAX_FRESH = 2;
+  let fresh = [], lastBest = [];
+  function addFresh(e) {
+    fresh = fresh.filter(f => f.word !== e.word);
+    fresh.unshift({ word: e.word, rank: e.rank, temp: e.temp, tempKey: tKey(e.temp), count: e.count,
+                    name: e.name, avatar: e.avatar, at: Date.now() });
+    fresh = fresh.slice(0, MAX_FRESH);
+    renderGuesses(lastBest);
+  }
+  function renderGuesses(best) {
+    lastBest = best;
+    const now = Date.now();
+    fresh = fresh.filter(f => now - f.at < FRESH_MS);
     const box = $('guessList');
     box.replaceChildren();
-    if (!latest && !best.length) { box.append(el('div', 'empty-hint', 'Type a word in chat to start hunting!')); return; }
+    if (!best.length && !fresh.length) { box.append(el('div', 'empty-hint', 'Type a word in chat to start hunting!')); return; }
     const mark = g => {
       const before = prevWords.get(g.word);
       return before === undefined ? 'new' : g.count > before ? 'more' : '';
     };
-    if (latest) box.append(guessRow(latest, 'latest ' + mark(latest)));
-    best.filter(g => !latest || g.word !== latest.word).slice(0, 6).forEach(g => box.append(guessRow(g, mark(g))));
-    prevWords = new Map([...best, ...(latest ? [latest] : [])].map(g => [g.word, g.count]));
+    fresh.forEach(f => box.append(guessRow(f, 'fresh')));
+    const shown = new Set(fresh.map(f => f.word));
+    best.filter(g => !shown.has(g.word)).slice(0, 7 - fresh.length).forEach(g => box.append(guessRow(g, mark(g))));
+    prevWords = new Map(best.map(g => [g.word, g.count]));
   }
+  setInterval(() => {                       // let expired "NEW" rows drop into place
+    if (fresh.some(f => Date.now() - f.at >= FRESH_MS)) renderGuesses(lastBest);
+  }, 300);
 
   let taglineI = 0, taglineT = 0;
   function tagline(s) {
@@ -303,7 +320,7 @@
       $('goalFill').style.width = Math.min(100, 100 * s.goal.value / s.goal.target) + '%';
     }
     renderHunters(s.topHunters);
-    renderGuesses(s.guesses[0], s.bestGuesses);
+    renderGuesses(s.bestGuesses);
     tagline(s);
 
     const h = s.hints[s.hints.length - 1];
