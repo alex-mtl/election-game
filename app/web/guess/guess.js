@@ -182,8 +182,8 @@
         fx('follow');
         mini('💜 ' + name + ' followed — thank you!', 'follow');
         break;
-      case 'unknown':
-        mini('❓ ' + clean(e.word) + ' — not in my dictionary', 'unknown');
+      case 'unknown':                     // shown in the list (grey) so the player sees it was read
+        addFresh(Object.assign({}, e, { unknown: true }), 2500);
         break;
       case 'hint':
         fx('hint');
@@ -237,6 +237,11 @@
     nm.append(el('span', 'n', g.name));
     if (g.count > 1) nm.append(el('span', 'cnt', '+' + (g.count - 1) + ' more'));
     who.append(avatar(g.name, g.avatar), nm);
+    if (g.unknown) {
+      row.classList.add('unknown');
+      row.append(el('div', 'rk', '❓'), el('div', 'wd', g.word), who, el('div', 'bar-note', 'NOT IN DICTIONARY'));
+      return row;
+    }
     row.append(el('div', 'rk t-' + g.tempKey, '#' + fmt(g.rank)), el('div', 'wd', g.word), who, bar);
     return row;
   }
@@ -246,17 +251,17 @@
   // (or leaves the list if it isn't among the best).
   const FRESH_MS = 5000, MAX_FRESH = 2;
   let fresh = [], lastBest = [];
-  function addFresh(e) {
+  function addFresh(e, ttl) {
     fresh = fresh.filter(f => f.word !== e.word);
-    fresh.unshift({ word: e.word, rank: e.rank, temp: e.temp, tempKey: tKey(e.temp), count: e.count,
-                    name: e.name, avatar: e.avatar, at: Date.now() });
+    fresh.unshift({ word: e.word, rank: e.rank, temp: e.temp, tempKey: tKey(e.temp), count: e.count || 1,
+                    name: e.name, avatar: e.avatar, at: Date.now(), ttl: ttl || FRESH_MS, unknown: !!e.unknown });
     fresh = fresh.slice(0, MAX_FRESH);
     renderGuesses(lastBest);
   }
   function renderGuesses(best) {
     lastBest = best;
     const now = Date.now();
-    fresh = fresh.filter(f => now - f.at < FRESH_MS);
+    fresh = fresh.filter(f => now - f.at < f.ttl);
     const box = $('guessList');
     box.replaceChildren();
     if (!best.length && !fresh.length) { box.append(el('div', 'empty-hint', 'Type a word in chat to start hunting!')); return; }
@@ -271,7 +276,7 @@
     prevWords = new Map(best.map(g => [g.word, g.count]));
   }
   setInterval(() => {                       // let expired "NEW" rows drop into place
-    if (fresh.some(f => Date.now() - f.at >= FRESH_MS)) renderGuesses(lastBest);
+    if (fresh.some(f => Date.now() - f.at >= f.ttl)) renderGuesses(lastBest);
   }, 300);
 
   let taglineI = 0, taglineT = 0;
@@ -330,16 +335,47 @@
       best.append(l);
     });
     if (!s.bestGuesses.length) best.append(el('div', 'line', '—'));
-    const st = $('rStream'); st.replaceChildren();
-    s.streamLeaderboard.slice(0, 5).forEach((p, i) => {
+    streamLeaders($('rStream'), s.streamLeaderboard);
+    streamLeaders($('lStream'), s.streamLeaderboard);
+    renderPromo(s.promo || []);
+  }
+
+  function streamLeaders(box, list) {
+    box.replaceChildren();
+    list.slice(0, 5).forEach((p, i) => {
       const l = el('div', 'line');
       l.append(el('span', '', ['🥇', '🥈', '🥉', '4.', '5.'][i] + ' ' + p.name),
                el('span', '', p.wins ? p.wins + (p.wins === 1 ? ' win' : ' wins')
                                      : p.podiums + (p.podiums === 1 ? ' podium' : ' podiums')));
-      st.append(l);
+      box.append(l);
     });
-    if (!s.streamLeaderboard.length) st.append(el('div', 'line', 'No winners yet'));
+    if (!list.length) box.append(el('div', 'line', 'No winners yet — be the first!'));
   }
+
+  // promo lines for the break; one of them is highlighted in turn
+  const PROMO_ICONS = ['❤️', '💜', '👥', '🎯', '🔥'];
+  const PROMO_COLORS = ['var(--magenta)', 'var(--cyan)', 'var(--lime)', 'var(--gold)', 'var(--orange)'];
+  let promoKey = '';
+  function renderPromo(lines) {
+    const key = lines.join('|');
+    if (key === promoKey) return;
+    promoKey = key;
+    const box = $('promo'); box.replaceChildren();
+    lines.forEach((t, i) => {
+      const p = el('div', 'p', PROMO_ICONS[i % PROMO_ICONS.length] + ' ' + t.toUpperCase());
+      p.style.setProperty('--c', PROMO_COLORS[i % PROMO_COLORS.length]);
+      box.append(p);
+    });
+  }
+  let promoI = -1;
+  function highlightPromo(step) {
+    const items = $('promo').children;
+    if (!items.length || step === promoI) return;
+    promoI = step;
+    [...items].forEach((n, i) => n.classList.toggle('on', i === step % items.length));
+  }
+  const fmtClock = sec => Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+  let breakVoice = {};
 
   function render(s) {
     S = s;
@@ -410,7 +446,26 @@
       t.classList.remove('low');
       if (S.phase === 'reveal') {
         const left = Math.max(0, Math.ceil(S.phaseUntil - now));
-        $('rNext').textContent = 'NEW ROUND IN ' + left + '...';
+        const elapsed = (S.breakSec || 0) - left;
+        const lobby = elapsed >= (S.resultsSec || 25) && left > 0;
+        $('rResults').hidden = lobby;
+        $('lobby').hidden = !lobby;
+        $('rNext').hidden = lobby;
+        $('rNext').textContent = 'NEXT ROUND IN ' + fmtClock(left);
+        $('lTime').textContent = fmtClock(left);
+        $('lTime').classList.toggle('soon', left <= 10);
+        if (lobby) highlightPromo(Math.floor(elapsed / 4));
+        const v = breakVoice[S.roundId] = breakVoice[S.roundId] || {};
+        if (lobby && !v.start && left > 35) {
+          v.start = true;
+          const mins = Math.round(left / 60);
+          voice('Next round in ' + (mins >= 1 ? mins + (mins === 1 ? ' minute' : ' minutes') : left + ' seconds') +
+                '! Follow and subscribe to join the game!', 'high');
+        }
+        if (!v.soon && left <= 30 && left > 25) {
+          v.soon = true;
+          voice('Next round in 30 seconds! Get ready to type your words!', 'high');
+        }
       }
       if (lastBig !== 'GO!' || S.phase !== 'playing') bigNum('');
     }

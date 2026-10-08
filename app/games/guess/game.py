@@ -190,7 +190,7 @@ class GuessGame(BaseGame):
         if word is None:
             if now - self.unknown_t > 1.0:               # throttle the toast
                 self.unknown_t = now
-                self.emit("unknown", word=raw.upper(), name=viewer.name)
+                self.emit("unknown", word=raw.upper(), name=viewer.name, avatar=viewer.avatar)
             print(f"[guess] rejected (unknown) {viewer.name}: {raw}")
             return
         p = self.players.get(viewer.id)
@@ -448,6 +448,8 @@ class GuessGame(BaseGame):
             "vocabSize": self.sem.size if self.sem else 0,
             "temps": dict(zip(TEMPS, config.TEMPERATURE_BOUNDS + [None])),
             "subscribersOnly": config.SUBSCRIBERS_ONLY,
+            "breakSec": config.REVEAL_SEC, "resultsSec": config.RESULTS_SEC,
+            "promo": config.PROMO_LINES,
             "goal": {"label": config.GOAL_LABEL, "value": self.stats.follows,
                      "target": config.GOAL_TARGET} if config.GOAL_TARGET else None,
         }

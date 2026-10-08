@@ -42,7 +42,9 @@ SPEED_ROUND_DURATION = _i("SPEED_ROUND_DURATION", 75)
 SPEED_ROUND_EVERY = _i("SPEED_ROUND_EVERY", 4)          # every Nth round is SPEED (0 = never)
 COUNTDOWN_SEC = _i("COUNTDOWN_SEC", 4)                  # 3, 2, 1, GO
 WINNER_SEC = _i("WINNER_SEC", 5)                        # winner card
-REVEAL_SEC = _i("REVEAL_SEC", 9)                        # podium + best guesses + "new round in"
+REVEAL_SEC = _i("REVEAL_SEC", 115)                      # break between rounds: results, then promo/lobby
+RESULTS_SEC = _i("RESULTS_SEC", 25)                     # first part of the break shows the round results
+PROMO_LINES = [x.strip() for x in os.getenv("PROMO_LINES", "FOLLOW so you never miss a round|SUBSCRIBE to join the game|Invite friends - more players, more fun").split("|") if x.strip()]
 GUESS_COOLDOWN_SECONDS = _f("GUESS_COOLDOWN_SECONDS", 3)
 # rank upper bounds: PERFECT, BURNING, VERY HOT, HOT, WARM, COLD (rest = FREEZING)
 TEMPERATURE_BOUNDS = [int(x) for x in _list("TEMPERATURE_BOUNDS", "1,10,50,200,1000,5000")]

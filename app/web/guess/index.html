@@ -57,12 +57,25 @@
     <div class="wchips" id="wChips"></div>
   </div>
   <div id="reveal" class="overlay" hidden>
-    <div class="rlabel">THE SECRET WORD WAS</div>
-    <div class="rword neon-magenta" id="rWord"></div>
-    <div class="podium" id="podium"></div>
-    <div class="rcols">
-      <div class="panel rbox"><div class="title"><span class="neon-cyan">BEST GUESSES</span></div><div id="rBest"></div></div>
-      <div class="panel rbox"><div class="title"><span class="neon-gold">STREAM LEADERS</span></div><div id="rStream"></div></div>
+    <div id="rResults" class="rpart">
+      <div class="rlabel">THE SECRET WORD WAS</div>
+      <div class="rword neon-magenta" id="rWord"></div>
+      <div class="podium" id="podium"></div>
+      <div class="rcols">
+        <div class="panel rbox"><div class="title"><span class="neon-cyan">BEST GUESSES</span></div><div id="rBest"></div></div>
+        <div class="panel rbox"><div class="title"><span class="neon-gold">STREAM LEADERS</span></div><div id="rStream"></div></div>
+      </div>
+    </div>
+    <!-- second part of the break: promote follow / subscribe / joining the next round -->
+    <div id="lobby" class="rpart" hidden>
+      <div class="lk">NEXT ROUND IN</div>
+      <div class="ltime neon-cyan" id="lTime">2:00</div>
+      <div class="promo" id="promo"></div>
+      <div class="panel lhow">
+        <div class="title"><span class="neon-lime">HOW TO PLAY</span></div>
+        <div>Type <b>one English word</b> in chat — see how close you are — find the secret word first!</div>
+      </div>
+      <div class="panel lleaders"><div class="title"><span class="neon-gold">STREAM LEADERS</span></div><div id="lStream"></div></div>
     </div>
     <div class="rnext" id="rNext"></div>
   </div>

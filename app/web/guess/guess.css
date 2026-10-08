@@ -207,3 +207,26 @@ body { display: flex; justify-content: center; }
                 overflow: hidden; text-overflow: ellipsis; }
 .grow .who .cnt { font: 800 calc(var(--u) * 2.8) var(--font-display); color: var(--lime); white-space: nowrap; }
 .grow.more .cnt { animation: pop .5s; }
+
+/* break between rounds: results first, then a promo "lobby" */
+.rpart { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 2.5); width: 100%; }
+.rpart[hidden] { display: none; }
+#lobby { gap: calc(var(--u) * 3.5); animation: fadeIn .6s; }
+#lobby .lk { font: 800 calc(var(--u) * 4) var(--font-display); color: var(--muted); letter-spacing: .3em; }
+#lobby .ltime { font: 900 calc(var(--u) * 18)/1 var(--font-display); font-variant-numeric: tabular-nums; }
+#lobby .ltime.soon { color: var(--lime); text-shadow: 0 0 .15em var(--lime), 0 0 .5em var(--lime); animation: pulse 1s infinite; }
+.promo { display: flex; flex-direction: column; gap: calc(var(--u) * 2); width: 100%; }
+.promo .p { font: 900 calc(var(--u) * 5.4)/1.15 var(--font-display); padding: .55em .8em; border-radius: calc(var(--u) * 3);
+            border: 2px solid var(--c); color: var(--c); background: color-mix(in srgb, var(--c) 10%, transparent);
+            text-shadow: 0 0 .3em var(--c); box-shadow: 0 0 1.2em color-mix(in srgb, var(--c) 45%, transparent); }
+.promo .p.on { animation: pop .7s, breathe 2.4s ease-in-out .7s infinite; }
+.lhow { padding: calc(var(--u) * 3); font-weight: 700; font-size: calc(var(--u) * 4.2); width: 100%; }
+.lhow b { color: var(--cyan); }
+.lleaders { padding: calc(var(--u) * 3); width: 100%; font-weight: 700; font-size: calc(var(--u) * 3.8); text-align: left; }
+.lleaders .line { display: flex; justify-content: space-between; padding: .15em 0; }
+
+/* unknown word: grey row on top for a moment, so the player knows it was read */
+.grow.unknown { opacity: .8; border-color: rgba(255,255,255,.3) !important; background: rgba(255,255,255,.05) !important; }
+.grow.unknown::before { content: 'UNKNOWN' !important; background: #aaa !important; }
+.grow.unknown .wd { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; }
+.grow .bar-note { grid-column: 2; grid-row: 2; font: 800 calc(var(--u) * 2.6) var(--font-display); color: var(--muted); letter-spacing: .08em; }
