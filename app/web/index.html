@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Live Games</title>
+<link rel="stylesheet" href="/common/neon.css">
+<style>
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center;
+         gap: calc(var(--u) * 6); padding: calc(var(--u) * 6); }
+  h1 { font: 900 calc(var(--u) * 9)/1 var(--font-display); letter-spacing: .06em; text-align: center; }
+  .sub { font: 700 calc(var(--u) * 4.2) var(--font-text); color: var(--muted); letter-spacing: .2em;
+         margin-top: calc(var(--u) * 2); text-align: center; }
+  .games { display: flex; flex-direction: column; gap: calc(var(--u) * 5); width: calc(var(--u) * 86); }
+  .card { position: relative; display: block; width: 100%; text-align: left; cursor: pointer;
+          padding: calc(var(--u) * 6) calc(var(--u) * 6); border-radius: calc(var(--u) * 4);
+          background: var(--bg-panel); color: var(--text); font-family: var(--font-text);
+          border: 2px solid var(--c); transition: transform .15s, box-shadow .15s;
+          box-shadow: 0 0 calc(var(--u) * 3) var(--c), inset 0 0 calc(var(--u) * 5) color-mix(in srgb, var(--c) 25%, transparent); }
+  .card:hover, .card:focus-visible { transform: scale(1.03); outline: none;
+          box-shadow: 0 0 calc(var(--u) * 6) var(--c), inset 0 0 calc(var(--u) * 8) color-mix(in srgb, var(--c) 35%, transparent); }
+  .card .t { font: 900 calc(var(--u) * 7)/1.05 var(--font-display); color: var(--c);
+             text-shadow: 0 0 .2em var(--c), 0 0 .7em var(--c); }
+  .card .d { font-size: calc(var(--u) * 4.4); margin-top: calc(var(--u) * 2.5); color: #e6dcff; }
+  .card .chat { display: inline-block; margin-top: calc(var(--u) * 3); font: 800 calc(var(--u) * 3.6) var(--font-display);
+                padding: .35em .8em; border-radius: 999px; border: 1px solid var(--c); color: var(--c); }
+  .card .now { position: absolute; top: 0; right: calc(var(--u) * 5); transform: translateY(-50%);
+               font: 800 calc(var(--u) * 3) var(--font-display); color: #000; background: var(--c);
+               padding: .3em .7em; border-radius: 999px; display: none; }
+  .card.active .now { display: block; }
+  .battle { --c: var(--pink); }
+  .guess  { --c: var(--cyan); }
+  .foot { color: var(--muted); font-size: calc(var(--u) * 3.4); text-align: center; }
+</style>
+</head>
+<body>
+  <div>
+    <h1><span class="neon-magenta">LIVE</span> <span class="neon-cyan">GAMES</span></h1>
+    <div class="sub">CHOOSE WHAT WE PLAY</div>
+  </div>
+  <div class="games" id="games"></div>
+  <div class="foot">The game screen follows your choice on every device</div>
+<script>
+const INFO = {
+  battle: { d: 'Red vs Yellow tug of war. Every comment pulls the bar. New viewers join your team!',
+            chat: 'CHAT:  R  /  Y' },
+  guess:  { d: 'Find the secret word. Every guess shows how close you are. First to find it wins!',
+            chat: 'CHAT:  ANY ENGLISH WORD' },
+};
+async function load() {
+  const r = await (await fetch('/api/games', { cache: 'no-store' })).json();
+  const box = document.getElementById('games');
+  box.replaceChildren();
+  r.games.forEach(g => {
+    const b = document.createElement('button');
+    b.className = 'card ' + g.name + (g.name === r.active ? ' active' : '');
+    const now = document.createElement('div'); now.className = 'now'; now.textContent = 'NOW PLAYING';
+    const t = document.createElement('div'); t.className = 't'; t.textContent = g.title.toUpperCase();
+    const d = document.createElement('div'); d.className = 'd'; d.textContent = (INFO[g.name] || {}).d || '';
+    const c = document.createElement('div'); c.className = 'chat'; c.textContent = (INFO[g.name] || {}).chat || '';
+    b.append(now, t, d, c);
+    b.onclick = async () => {
+      await fetch('/api/active', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                   body: JSON.stringify({ game: g.name }) });
+      location.href = '/' + g.name + '/' + location.search;
+    };
+    box.appendChild(b);
+  });
+}
+load();
+</script>
+</body>
+</html>

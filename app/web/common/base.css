@@ -1,0 +1,11 @@
+/* Shared by all game pages: corner controls + "enable sound" overlay. */
+.ctl-bar { position: fixed; right: 1.2vw; bottom: 12vh; z-index: 30; display: flex;
+           flex-direction: column; gap: 0.6vh; }
+.ctl-btn { font: 700 min(4vw, 2.6vh) system-ui, sans-serif; width: min(8vw, 5vh); height: min(8vw, 5vh);
+           border-radius: 50%; border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.35);
+           color: #fff; opacity: .35; cursor: pointer; padding: 0; }
+.ctl-btn:hover { opacity: 1; }
+.ctl-unlock { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center;
+              justify-content: center; background: rgba(0,0,0,.6); cursor: pointer; }
+.ctl-unlock button { font: 900 min(5vw, 3.2vh) system-ui, sans-serif; padding: 1em 1.6em; border: 0;
+                     border-radius: 1em; background: #fff; color: #111; cursor: pointer; }

@@ -1,1 +1,4 @@
 TikTokLive
+fastapi
+uvicorn[standard]
+numpy

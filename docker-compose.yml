@@ -9,7 +9,7 @@ services:
         required: false
     environment:
       PORT: 8765
-      STATE_FILE: /data/state.json
+      DATA_DIR: /data
     volumes:
       - ./data:/data
     ports:

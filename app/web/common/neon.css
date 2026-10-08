@@ -1,0 +1,51 @@
+/* Neon theme tokens (menu + Guess the Word). Change colors here. */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap');
+
+:root {
+  --bg: #07020f;
+  --bg-panel: rgba(20, 6, 40, .72);
+  --line: rgba(160, 120, 255, .28);
+  --text: #f4f0ff;
+  --muted: #a99bd0;
+  --cyan: #00f0ff;
+  --magenta: #ff2bd6;
+  --lime: #39ff14;
+  --yellow: #ffe600;
+  --orange: #ff7a00;
+  --pink: #ff2d75;
+  --violet: #9d4dff;
+  --gold: #ffd84a;
+
+  /* temperature scale */
+  --t-perfect: #ffffff;
+  --t-burning: #ff2d55;
+  --t-veryhot: #ff6a00;
+  --t-hot: #ffb800;
+  --t-warm: #c6ff00;
+  --t-cold: #00e5ff;
+  --t-freezing: #5b7cff;
+
+  --font-display: 'Orbitron', 'Segoe UI', system-ui, sans-serif;
+  --font-text: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  /* 9:16 overlay unit: never wider than a phone column, scales with height */
+  --u: min(1vw, 0.5625vh);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: radial-gradient(120% 80% at 50% 0%, #1d0640 0%, var(--bg) 55%) fixed, var(--bg);
+  color: var(--text); font-family: var(--font-text);
+  -webkit-user-select: none; user-select: none;
+}
+
+.neon-cyan    { color: var(--cyan);    text-shadow: 0 0 .25em var(--cyan), 0 0 .8em rgba(0,240,255,.6); }
+.neon-magenta { color: var(--magenta); text-shadow: 0 0 .25em var(--magenta), 0 0 .8em rgba(255,43,214,.6); }
+.neon-lime    { color: var(--lime);    text-shadow: 0 0 .25em var(--lime), 0 0 .8em rgba(57,255,20,.6); }
+.neon-gold    { color: var(--gold);    text-shadow: 0 0 .25em var(--gold), 0 0 .8em rgba(255,216,74,.6); }
+
+.panel {
+  background: var(--bg-panel); border: 1px solid var(--line); border-radius: calc(var(--u) * 3);
+  box-shadow: 0 0 calc(var(--u) * 3) rgba(157,77,255,.25), inset 0 0 calc(var(--u) * 4) rgba(157,77,255,.08);
+  backdrop-filter: blur(4px);
+}

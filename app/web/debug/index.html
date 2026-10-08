@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debug Controls</title>
+<link rel="stylesheet" href="/common/neon.css">
+<style>
+  html, body { overflow: auto; }
+  body { padding: 16px; font-size: 16px; max-width: 720px; margin: 0 auto; }
+  h1 { font: 900 22px var(--font-display); margin-bottom: 4px; }
+  .muted { color: var(--muted); margin-bottom: 14px; }
+  fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+  legend { font: 800 13px var(--font-display); color: var(--cyan); padding: 0 6px; letter-spacing: .1em; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+  input, select { font: 600 15px var(--font-text); padding: 7px 10px; border-radius: 8px;
+                  border: 1px solid var(--line); background: #12062a; color: var(--text); min-width: 0; }
+  button { font: 800 13px var(--font-display); padding: 9px 12px; border-radius: 8px; cursor: pointer;
+           border: 1px solid var(--c, var(--magenta)); background: transparent; color: var(--c, var(--magenta)); }
+  button:hover { background: color-mix(in srgb, var(--c, var(--magenta)) 18%, transparent); }
+  .g { --c: var(--cyan); } .b { --c: var(--pink); } .x { --c: var(--orange); }
+  pre { white-space: pre-wrap; word-break: break-word; background: #0c0320; border-radius: 8px; padding: 10px;
+        font-size: 13px; color: var(--lime); min-height: 2em; }
+</style>
+</head>
+<body>
+<h1><span class="neon-cyan">DEBUG</span> CONTROLS</h1>
+<div class="muted">Acts on the <b id="active">?</b> game. Open the overlay in another tab to watch.
+  <a href="/" style="color:var(--cyan)">Menu</a></div>
+
+<fieldset>
+  <legend>PLAYER</legend>
+  <div class="row"><input id="name" value="Alex" placeholder="name">
+    <input id="word" placeholder="word to guess"><button class="g" data-a="send_guess">send guess</button></div>
+  <div class="row"><input id="gift" value="Rose" placeholder="gift name"><button class="g" data-a="send_gift">send gift</button>
+    <button class="g" data-a="hint">hint</button></div>
+</fieldset>
+
+<fieldset>
+  <legend>GUESS THE WORD</legend>
+  <div class="row">
+    <button class="g" data-a="start_round">start / skip round</button>
+    <button class="g" data-a="finish_round">finish (timeout)</button>
+    <button class="g" data-a="force_winner">force winner</button>
+    <button class="g" data-a="secret">show secret</button>
+  </div>
+  <div class="row">
+    <button class="g" data-a="trigger_new_leader">new leader</button>
+    <button class="g" data-a="trigger_massive_jump">massive jump</button>
+    <select id="level"><option>so_close</option><option>top3</option><option>top10</option><option>top50</option></select>
+    <button class="g" data-a="trigger_close_guess">close guess</button>
+    <input id="n" value="3" size="2"><button class="g" data-a="trigger_streak">streak</button>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>TEAM BATTLE</legend>
+  <div class="row">
+    <button class="b" data-a="tap" data-color="red">tap red</button>
+    <button class="b" data-a="tap" data-color="yellow">tap yellow</button>
+    <button class="b" data-a="join">viewer joins</button>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>DANGER</legend>
+  <div class="row"><button class="x" data-a="reset">reset active game (score to zero)</button></div>
+</fieldset>
+<pre id="out"></pre>
+
+<script>
+const v = id => document.getElementById(id).value;
+async function refresh() {
+  try { document.getElementById('active').textContent = (await (await fetch('/api/games')).json()).active; } catch (e) {}
+}
+document.querySelectorAll('button[data-a]').forEach(b => b.onclick = async () => {
+  const a = b.dataset.a;
+  if (a === 'reset' && !confirm('Reset the active game to zero?')) return;
+  const body = { name: v('name'), word: v('word'), gift: v('gift'), level: v('level'), n: v('n'), color: b.dataset.color };
+  const r = await fetch('/api/debug/' + a, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  document.getElementById('out').textContent = a + ' → ' + r.status + ' ' + await r.text();
+  refresh();
+});
+refresh(); setInterval(refresh, 3000);
+</script>
+</body>
+</html>
