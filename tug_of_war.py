@@ -32,6 +32,7 @@ from urllib.parse import parse_qs, urlparse
 TIKTOK_USERNAME = os.getenv("TIKTOK_USERNAME", "CHANGE_ME").lstrip("@") or "CHANGE_ME"
 STEP_PCT = float(os.getenv("STEP_PCT", "1.0"))                  # screen % gained per tap
 TAP_COOLDOWN_SEC = float(os.getenv("TAP_COOLDOWN_SEC", "1.0"))  # min seconds between counted taps of one user
+TEAM_COOLDOWN_SEC = float(os.getenv("TEAM_COOLDOWN_SEC", "5"))  # min seconds between one user's taps for the same team
 WIN_PAUSE_SEC = float(os.getenv("WIN_PAUSE_SEC", "15"))         # winner banner duration, then next round
 PORT = int(os.getenv("PORT", "8765"))
 RECONNECT_SEC = float(os.getenv("RECONNECT_SEC", "15"))        # retry delay while offline / after drop
@@ -147,7 +148,10 @@ class Game:
                 return False
             if now - self.last_tap.get(user, 0) < TAP_COOLDOWN_SEC:
                 return False                    # anti-spam cooldown
+            if now - self.last_tap.get((user, color), 0) < TEAM_COOLDOWN_SEC:
+                return False                    # same user + same team: once per N sec
             self.last_tap[user] = now
+            self.last_tap[(user, color)] = now
             self._event(type="tap", color=color, name=self.name(user))
             self._push(user, color, now)
             return True
