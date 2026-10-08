@@ -16,6 +16,10 @@ class RoundPlayer:
     improvements: int = 0
     last_t: float = 0.0           # last accepted guess (cooldown)
     tier: int = 10**9             # best "close guess" milestone reached
+    pending_until: float = 0.0    # non-follower: must follow before this time
+    dq: bool = False              # didn't follow in time: out of the ranking until they follow
+    found_exact: bool = False     # found the word while not following yet
+    dq_note_t: float = 0.0        # last "follow to play" reminder
     words: set = field(default_factory=set)
 
     def to_dict(self):

@@ -130,8 +130,7 @@ class GuessGame(BaseGame):
         self.phase_until = now + config.WINNER_SEC
         if reason != "exact":
             self.emit("timeout", reason=reason)
-            ranked = sorted((p for p in self.players.values() if p.best),
-                            key=lambda p: (p.best, p.best_t))
+            ranked = self._ranked(confirmed_only=True)
             player = ranked[0] if ranked else None
         self.podium = self._podium()
         podium_ids = [p["id"] for p in self.podium]
@@ -164,8 +163,7 @@ class GuessGame(BaseGame):
         for pid in self.exact_order:
             if pid in self.players and pid not in seen:
                 out.append(self.players[pid]); seen.add(pid)
-        rest = sorted((p for p in self.players.values() if p.best and p.id not in seen),
-                      key=lambda p: (p.best, p.best_t))
+        rest = [p for p in self._ranked(confirmed_only=True) if p.id not in seen]
         out += rest
         return [{"id": p.id, "name": p.name, "avatar": p.avatar, "rank": p.best}
                 for p in out[:3]]
@@ -197,6 +195,20 @@ class GuessGame(BaseGame):
         if p is None:
             p = self.players[viewer.id] = RoundPlayer(viewer.id, viewer.name, viewer.avatar)
         p.name, p.avatar = viewer.name, viewer.avatar or p.avatar
+        if self._needs_follow(viewer):
+            if p.dq:                                     # out until they follow
+                if now - p.dq_note_t > 10:
+                    p.dq_note_t = now
+                    self.emit("follow_needed", name=p.name, avatar=p.avatar, dq=True)
+                print(f"[guess] rejected (not following) {viewer.name}: {word}")
+                return
+            if not p.pending_until:
+                p.pending_until = now + config.FOLLOW_GRACE_SEC
+                self.emit("follow_needed", name=p.name, avatar=p.avatar, dq=False,
+                          seconds=config.FOLLOW_GRACE_SEC)
+                print(f"[guess] {viewer.name} is not following: {config.FOLLOW_GRACE_SEC:.0f}s to follow")
+        elif viewer.follows > 0 and (p.pending_until or p.dq):
+            self._confirm(p, now)                        # their newer comments show them following
         if word in p.words:
             return                                       # same word again: ignore
         if now - p.last_t < config.GUESS_COOLDOWN_SECONDS:
@@ -243,12 +255,37 @@ class GuessGame(BaseGame):
                     break
             self._update_leader()
         if r == 1:
+            if p.pending_until:                          # found it, but must follow to win
+                p.found_exact = True
+                self.emit("found_pending", name=p.name, avatar=p.avatar,
+                          seconds=max(1, round(p.pending_until - now)))
+            else:
+                self.exact_order.append(p.id)
+                self._finish(now, "exact", p)
+        self.dirty = True
+
+    def _ranked(self, confirmed_only=False):
+        return sorted((p for p in self.players.values()
+                       if p.best and not p.dq and not (confirmed_only and p.pending_until)),
+                      key=lambda p: (p.best, p.best_t))
+
+    def _needs_follow(self, viewer):
+        return (config.FOLLOW_REQUIRED and viewer.follows == 0
+                and viewer.id.lower() != config.TIKTOK_USERNAME.lower())
+
+    def _confirm(self, p, now):
+        """Player followed: keep their place (or get it back)."""
+        p.pending_until, p.dq = 0.0, False
+        self.emit("follow_ok", name=p.name, avatar=p.avatar)
+        print(f"[guess] {p.name} followed -> counts")
+        self._update_leader()
+        if p.found_exact and self.phase == PLAYING:
             self.exact_order.append(p.id)
             self._finish(now, "exact", p)
         self.dirty = True
 
     def _update_leader(self):
-        ranked = sorted((p for p in self.players.values() if p.best), key=lambda p: (p.best, p.best_t))
+        ranked = self._ranked()
         if not ranked or ranked[0].id == self.leader_id:
             return
         new, prev = ranked[0], self.players.get(self.leader_id)
@@ -287,6 +324,9 @@ class GuessGame(BaseGame):
     def on_follow(self, viewer: Viewer):
         self.stats.follows += 1
         self.emit("follow", name=viewer.name, avatar=viewer.avatar)
+        p = self.players.get(viewer.id)
+        if p and (p.pending_until or p.dq):
+            self._confirm(p, time.time())
 
     # ------------------------------------------------------------------ lifecycle
     def on_activate(self):
@@ -296,6 +336,9 @@ class GuessGame(BaseGame):
             self.started_at += shift
             self.ends_at += shift
             self.phase_until += shift
+            for p in self.players.values():
+                if p.pending_until:
+                    p.pending_until += shift
             self.paused_at = None
         self.dirty = True
 
@@ -322,6 +365,15 @@ class GuessGame(BaseGame):
         elif self.phase == COUNTDOWN and now >= self.phase_until:
             self._start_playing(now)
         elif self.phase == PLAYING:
+            for p in list(self.players.values()):
+                if p.pending_until and now >= p.pending_until:
+                    p.pending_until, p.dq = 0.0, True
+                    self.emit("dq", name=p.name, avatar=p.avatar, found=p.found_exact)
+                    print(f"[guess] {p.name} didn't follow in time -> removed from TOP")
+                    if self.leader_id == p.id:
+                        self.leader_id = None
+                    self._update_leader()
+                    self.dirty = True
             if now >= self.ends_at:
                 self._finish(now, "timeout")
             elif config.AUTO_HINT and not self.auto_hint_done and \
@@ -345,7 +397,12 @@ class GuessGame(BaseGame):
         now = time.time()
         progress = (now - self.started_at) / max(1, self.ends_at - self.started_at)
         name = random.choice(SIM_NAMES)
-        v = Viewer(name.lower(), name, "")
+        follows = 0 if name in ("Noah", "Mia") else 1          # two fake non-followers
+        v = Viewer(name.lower(), name, "", follows)
+        p = self.players.get(v.id)
+        if p and p.pending_until and random.random() < 0.08:    # some of them do follow
+            self.on_follow(v)
+            return 0.5
         roll = random.random()
         if roll < 0.03:
             self.on_gift(v, random.choice(["Rose", "Heart", "GG"]), random.randint(1, 5))
@@ -377,7 +434,11 @@ class GuessGame(BaseGame):
                 p = self.players.setdefault(v.id, RoundPlayer(v.id, v.name))
                 p.last_t = 0
                 self._accept(p, self.secret, now)
+        elif action == "follow":
+            self.on_follow(v)
         elif action == "send_guess":
+            if str(params.get("follows", "")).strip() in ("0", "false", "no"):
+                v.follows = 0
             p = self.players.get(v.id)
             if p:
                 p.last_t = 0
@@ -412,14 +473,14 @@ class GuessGame(BaseGame):
 
     def snapshot(self):
         now = time.time()
-        players = sorted((p for p in self.players.values() if p.best), key=lambda p: (p.best, p.best_t))
+        players = self._ranked()
         reveal = self.phase in (WINNER, REVEAL, FINISHED)
         hunters = []
         for p in players[:5]:
             t = temperature(p.best)
             hunters.append({"name": p.name, "avatar": p.avatar, "rank": p.best, "temp": t,
                             "tempKey": temp_key(t), "guesses": p.guesses, "prev": p.prev,
-                            "leader": p.id == self.leader_id})
+                            "leader": p.id == self.leader_id, "pendingUntil": p.pending_until})
         best = sorted(self.guesses.values(), key=lambda g: g["rank"])
         return {
             "error": self.error,

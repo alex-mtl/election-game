@@ -31,7 +31,8 @@
 <fieldset>
   <legend>PLAYER</legend>
   <div class="row"><input id="name" value="Alex" placeholder="name">
-    <input id="word" placeholder="word to guess"><button class="g" data-a="send_guess">send guess</button></div>
+    <input id="word" placeholder="word to guess"><button class="g" data-a="send_guess">send guess</button>
+    <label><input type="checkbox" id="nofollow"> not following</label><button class="g" data-a="follow">follow</button></div>
   <div class="row"><input id="gift" value="Rose" placeholder="gift name"><button class="g" data-a="send_gift">send gift</button>
     <button class="g" data-a="hint">hint</button></div>
 </fieldset>
@@ -76,7 +77,7 @@ async function refresh() {
 document.querySelectorAll('button[data-a]').forEach(b => b.onclick = async () => {
   const a = b.dataset.a;
   if (a === 'reset' && !confirm('Reset the active game to zero?')) return;
-  const body = { name: v('name'), word: v('word'), gift: v('gift'), level: v('level'), n: v('n'), color: b.dataset.color };
+  const body = { follows: document.getElementById('nofollow').checked ? '0' : '', name: v('name'), word: v('word'), gift: v('gift'), level: v('level'), n: v('n'), color: b.dataset.color };
   const r = await fetch('/api/debug/' + a, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   document.getElementById('out').textContent = a + ' → ' + r.status + ' ' + await r.text();
   refresh();

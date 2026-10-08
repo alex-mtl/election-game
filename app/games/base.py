@@ -11,6 +11,7 @@ class Viewer:
     id: str              # stable TikTok @unique_id
     name: str            # display nickname
     avatar: str = ""     # https avatar url or ""
+    follows: int = -1    # follow status towards the host: 0 no, 1 follower, 2 friends, -1 unknown
 
 
 class BaseGame:

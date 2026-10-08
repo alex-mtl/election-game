@@ -182,6 +182,28 @@
         fx('follow');
         mini('💜 ' + name + ' followed — thank you!', 'follow');
         break;
+      case 'follow_needed':
+        if (e.dq) mini('❤ ' + name + ' — FOLLOW to play and win!', 'follow');
+        else {
+          mini('❤ ' + name + ' — FOLLOW within ' + e.seconds + 's to keep your spot!', 'follow');
+          voice(name + ', follow to keep your spot!');
+        }
+        break;
+      case 'found_pending':
+        fx('close', 'so_close');
+        toast('😱 ' + name.toUpperCase() + ' FOUND IT!', 'FOLLOW in ' + e.seconds + 's to WIN!', 'var(--magenta)', { huge: true, important: true, hold: 2.6 });
+        voice(name + ' found the word! Follow now to win!', 'high');
+        break;
+      case 'follow_ok':
+        fx('follow');
+        toast('💜 THANKS ' + name.toUpperCase() + '!', "You're in the game!", 'var(--violet)', { important: true });
+        voice('Thank you ' + name + '! You are in the game!');
+        break;
+      case 'dq':
+        fx('timeout');
+        toast('😢 SORRY ' + name.toUpperCase(), 'You must FOLLOW to win. Follow and come back!', 'var(--pink)', { important: true, hold: 2.4 });
+        voice('Sorry ' + name + '! You need to follow to win!', 'high');
+        break;
       case 'unknown':                     // shown in the list (grey) so the player sees it was read
         addFresh(Object.assign({}, e, { unknown: true }), 2500);
         break;
@@ -219,7 +241,15 @@
       const li = el('li', 'hrow' + (h.leader ? ' leader' : ''));
       const before = prevHunters.get(h.name);
       if (before && h.rank < before) li.classList.add('up');
-      li.append(el('span', 'pos', medals[i]), avatar(h.name, h.avatar), el('span', 'nm', h.name),
+      const nm = el('span', 'nm');
+      nm.append(el('span', 'n', h.name));
+      if (h.pendingUntil) {                      // not following yet: countdown to keep the spot
+        li.classList.add('pending');
+        const fw = el('span', 'fw');
+        fw.dataset.until = h.pendingUntil;
+        nm.append(fw);
+      }
+      li.append(el('span', 'pos', medals[i]), avatar(h.name, h.avatar), nm,
                 el('span', 'rk t-' + h.tempKey, '#' + fmt(h.rank)));
       box.append(li);
     });
@@ -427,6 +457,9 @@
   function clock() {
     if (!S || S.error) return;
     const now = Live.now();
+    document.querySelectorAll('#hunterList .fw').forEach(n => {
+      n.textContent = '❤ FOLLOW · ' + Math.max(0, Math.ceil(Number(n.dataset.until) - now)) + 's';
+    });
     const t = $('timer');
     if (S.phase === 'playing') {
       const left = Math.max(0, Math.ceil(S.endsAt - now));

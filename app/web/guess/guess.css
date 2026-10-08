@@ -230,3 +230,11 @@ body { display: flex; justify-content: center; }
 .grow.unknown::before { content: 'UNKNOWN' !important; background: #aaa !important; }
 .grow.unknown .wd { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; }
 .grow .bar-note { grid-column: 2; grid-row: 2; font: 800 calc(var(--u) * 2.6) var(--font-display); color: var(--muted); letter-spacing: .08em; }
+
+/* non-follower in TOP HUNTERS: countdown to follow */
+.hrow .nm { display: flex; flex-direction: column; min-width: 0; }
+.hrow .nm .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hrow .fw { font: 800 calc(var(--u) * 2.6) var(--font-display); color: var(--magenta); letter-spacing: .05em;
+            text-shadow: 0 0 .4em var(--magenta); animation: pulse 1s infinite; }
+.hrow.pending { background: linear-gradient(90deg, rgba(255,43,214,.16), transparent); box-shadow: inset 2px 0 0 var(--magenta); }
+.hrow.pending .av { opacity: .8; }

@@ -18,7 +18,14 @@ def viewer_of(user):
         avatar = next((u for u in urls if u.startswith("https://")), "")
     except Exception:
         pass
-    return Viewer(uid, name, avatar)
+    follows = -1
+    try:
+        fi = getattr(user, "follow_info", None)
+        if fi is not None:
+            follows = int(getattr(fi, "follow_status", 0) or 0)
+    except Exception:
+        pass
+    return Viewer(uid, name, avatar, follows)
 
 
 class TikTokConnector:
@@ -96,7 +103,7 @@ class TikTokConnector:
         def comment(event):
             v, text = viewer_of(event.user), (getattr(event, "comment", "") or "")[:200]
             if config.LOG_CHAT:
-                print(f"[chat] {v.name} (@{v.id}): {text!r}")
+                print(f"[chat] {v.name} (@{v.id}) follow={v.follows}: {text!r}")
             hub.comment(v, text)
 
         def join(event):

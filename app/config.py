@@ -53,6 +53,10 @@ DYNAMIC_DIFFICULTY = _b("DYNAMIC_DIFFICULTY", "1")
 AUTO_HINT = _b("AUTO_HINT", "1")                        # hint when nobody gets close
 HINT_TYPES = _list("HINT_TYPES", "semantic,category,letter,semantic")
 HINT_COOLDOWN_SEC = _f("HINT_COOLDOWN_SEC", 20)
+# Only followers can win: a non-follower stays in TOP HUNTERS for FOLLOW_GRACE_SEC to follow,
+# otherwise is removed ("follow to win"). The host is never checked.
+FOLLOW_REQUIRED = _b("FOLLOW_REQUIRED", "1")
+FOLLOW_GRACE_SEC = _f("FOLLOW_GRACE_SEC", 30)
 GIFT_HINT_NAMES = [g.lower() for g in _list("GIFT_HINT_NAMES", "Rose")]
 GIFT_NEW_ROUND_NAMES = [g.lower() for g in _list("GIFT_NEW_ROUND_NAMES", "")]
 SUBSCRIBERS_ONLY = _b("SUBSCRIBERS_ONLY")

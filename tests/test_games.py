@@ -132,6 +132,41 @@ class GuessTest(unittest.TestCase):
         self.assertNotEqual(h["word"].lower(), g.secret)
 
 
+class FollowTest(GuessTest):
+    def nf(self, name):
+        return Viewer(name.lower(), name, "", 0)            # not following
+
+    def test_non_follower_removed_after_grace(self):
+        config.FOLLOW_REQUIRED, config.FOLLOW_GRACE_SEC = True, 30
+        g = self.make()
+        g.on_comment(self.nf("Logan"), "water")
+        p = g.players["logan"]
+        self.assertTrue(p.pending_until)
+        self.assertEqual(g.snapshot()["topHunters"][0]["name"], "Logan")   # shown meanwhile
+        g.tick(p.pending_until + 0.1)
+        self.assertTrue(p.dq)
+        self.assertEqual(g.snapshot()["topHunters"], [])                    # removed
+        g.on_follow(self.nf("Logan"))                                       # follows later -> back
+        self.assertFalse(p.dq)
+        self.assertEqual(g.snapshot()["topHunters"][0]["name"], "Logan")
+
+    def test_non_follower_must_follow_to_win(self):
+        config.FOLLOW_REQUIRED, config.FOLLOW_GRACE_SEC = True, 30
+        g = self.make()
+        g.on_comment(self.nf("Logan"), g.secret)
+        self.assertEqual(g.phase, guess_mod.PLAYING)                       # not a win yet
+        g.on_follow(self.nf("Logan"))
+        self.assertEqual(g.phase, guess_mod.WINNER)
+        self.assertEqual(g.winner["name"], "Logan")
+
+    def test_host_and_followers_not_checked(self):
+        config.FOLLOW_REQUIRED = True
+        g = self.make()
+        g.on_comment(Viewer("alex", "Alex", "", 1), "water")
+        g.on_comment(Viewer(config.TIKTOK_USERNAME.lower(), "Host", "", 0), "fire")
+        self.assertFalse(any(p.pending_until for p in g.players.values()))
+
+
 class BattleTest(unittest.TestCase):
     def test_cooldowns_and_join(self):
         b = BattleGame(JsonStore(tempfile.mkdtemp()))
