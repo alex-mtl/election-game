@@ -202,15 +202,19 @@
     return row;
   }
 
-  function renderGuesses(list) {
+  // latest guess pinned on top (highlighted), then the closest words sorted by rank —
+  // good guesses stay on screen instead of scrolling away
+  function renderGuesses(latest, best) {
     const box = $('guessList');
     box.replaceChildren();
-    if (!list.length) { box.append(el('div', 'empty-hint', 'Type a word in chat to start hunting!')); return; }
-    list.slice(0, 7).forEach(g => {
+    if (!latest && !best.length) { box.append(el('div', 'empty-hint', 'Type a word in chat to start hunting!')); return; }
+    const mark = g => {
       const before = prevWords.get(g.word);
-      box.append(guessRow(g, before === undefined ? 'new' : g.count > before ? 'more' : ''));
-    });
-    prevWords = new Map(list.map(g => [g.word, g.count]));
+      return before === undefined ? 'new' : g.count > before ? 'more' : '';
+    };
+    if (latest) box.append(guessRow(latest, 'latest ' + mark(latest)));
+    best.filter(g => !latest || g.word !== latest.word).slice(0, 6).forEach(g => box.append(guessRow(g, mark(g))));
+    prevWords = new Map([...best, ...(latest ? [latest] : [])].map(g => [g.word, g.count]));
   }
 
   let taglineI = 0, taglineT = 0;
@@ -299,7 +303,7 @@
       $('goalFill').style.width = Math.min(100, 100 * s.goal.value / s.goal.target) + '%';
     }
     renderHunters(s.topHunters);
-    renderGuesses(s.guesses);
+    renderGuesses(s.guesses[0], s.bestGuesses);
     tagline(s);
 
     const h = s.hints[s.hints.length - 1];

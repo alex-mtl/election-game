@@ -85,7 +85,7 @@ body { display: flex; justify-content: center; }
 #hintCard .hk { font: 900 calc(var(--u) * 3.2) var(--font-display); color: var(--yellow); }
 #hintCard b { font: 900 calc(var(--u) * 4.4) var(--font-display); color: var(--yellow); text-shadow: 0 0 .4em var(--yellow); }
 #hintCard.new { animation: pop .6s; }
-#miniToasts { position: absolute; left: 0; right: 0; bottom: calc(100% + var(--u) * 1); display: flex; flex-direction: column;
+#miniToasts { position: absolute; left: 0; right: 0; top: calc(var(--u) * 27); z-index: 5; display: flex; flex-direction: column;
               gap: calc(var(--u) * 1); align-items: center; pointer-events: none; }
 .mini { font-weight: 700; font-size: calc(var(--u) * 3.4); padding: .35em .9em; border-radius: 999px;
         background: rgba(10,0,25,.85); border: 1px solid var(--line); animation: slideIn .35s, fadeOut .5s 2.3s forwards; }
@@ -182,3 +182,11 @@ body { display: flex; justify-content: center; }
 /* corner controls: one small row under the call to action, not over the lists */
 .ctl-bar { flex-direction: row; right: 50%; bottom: .8vh; transform: translateX(50%); gap: calc(var(--u) * 2); }
 .ctl-btn { width: calc(var(--u) * 6.5); height: calc(var(--u) * 6.5); font-size: calc(var(--u) * 3.2); }
+
+/* latest guess: pinned above the sorted best guesses */
+.grow.latest { position: relative; padding: calc(var(--u) * 1.2) calc(var(--u) * 2); margin: 0 calc(var(--u) * -2);
+               border-radius: calc(var(--u) * 2); background: rgba(0,240,255,.08); border: 1px solid rgba(0,240,255,.45);
+               margin-bottom: calc(var(--u) * 1); }
+.grow.latest::before { content: 'LAST'; position: absolute; top: 0; left: calc(var(--u) * 2); transform: translateY(-50%);
+               font: 800 calc(var(--u) * 2.2) var(--font-display); color: #000; background: var(--cyan);
+               padding: .15em .5em; border-radius: 999px; letter-spacing: .1em; }

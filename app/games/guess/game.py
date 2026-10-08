@@ -434,7 +434,7 @@ class GuessGame(BaseGame):
             "paused": bool(self.paused_at),
             "secretWord": self.secret.upper() if reveal and self.secret else None,
             "guesses": [self._row(self.guesses[w]) for w in self.recent if w in self.guesses],
-            "bestGuesses": [self._row(g) for g in best[:6] if g["rank"] > 1 or reveal],
+            "bestGuesses": [self._row(g) for g in best[:10] if g["rank"] > 1 or reveal],
             "topHunters": hunters,
             "leader": hunters[0] if hunters else None,
             "winner": self.winner if reveal else None,
