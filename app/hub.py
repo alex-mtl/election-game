@@ -70,7 +70,7 @@ class Hub:
     def message(self, name, since=None):
         g = self.games[name]
         return {"active": self.active, "game": name, "seq": g.seq, "now": time.time(),
-                "tiktok": self.tiktok_status,
+                "tiktok": self.tiktok_status, "version": getattr(self, "web_version", ""),
                 "events": g.events_since(since) if since is not None else [],
                 "state": g.snapshot()}
 

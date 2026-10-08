@@ -12,6 +12,7 @@
   POST /api/debug/<action>   debug controls for the active game
 """
 
+import hashlib
 import os
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -23,8 +24,25 @@ from . import config
 WEB = os.path.join(os.path.dirname(__file__), "web")
 
 
+def web_version():
+    """Hash of all page files: open overlays reload themselves when it changes."""
+    h = hashlib.sha1()
+    for root, _, files in sorted(os.walk(WEB)):
+        for f in sorted(files):
+            with open(os.path.join(root, f), "rb") as fh:
+                h.update(f.encode() + fh.read())
+    return h.hexdigest()[:12]
+
+
 def create_app(hub):
     app = FastAPI(title="TikTok LIVE games", docs_url=None, redoc_url=None)
+    hub.web_version = web_version()
+
+    @app.middleware("http")
+    async def no_cache(request, call_next):
+        resp = await call_next(request)
+        resp.headers["Cache-Control"] = "no-cache"   # always revalidate -> never a stale overlay
+        return resp
 
     @app.get("/")
     def menu():

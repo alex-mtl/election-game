@@ -3,10 +3,15 @@
 // - follows the active game: if another game is picked in the menu, this page navigates there
 // - Live.now() = server clock in seconds (timers stay in sync with the server)
 window.Live = (() => {
-  let opts, lastSeq = null, offset = 0, ws = null, pollTimer = null, wsRetry = null;
+  let opts, lastSeq = null, offset = 0, ws = null, pollTimer = null, wsRetry = null, version = null;
 
   function handle(msg) {
     offset = msg.now * 1000 - Date.now();
+    // pages were updated on the server -> reload so the overlay never shows an old version
+    if (msg.version) {
+      if (version && msg.version !== version) { location.reload(); return; }
+      version = msg.version;
+    }
     if (opts.game && msg.active && msg.active !== opts.game) {
       location.href = '/' + msg.active + '/' + location.search;
       return;
