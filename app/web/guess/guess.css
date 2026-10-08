@@ -187,7 +187,23 @@ body { display: flex; justify-content: center; }
 /* brand-new guess: shown on top for a few seconds, then drops to its place by rank */
 .grow.fresh { position: relative; padding: calc(var(--u) * 1.2) calc(var(--u) * 2); margin: 0 calc(var(--u) * -2);
               border-radius: calc(var(--u) * 2); background: rgba(0,240,255,.08); border: 1px solid rgba(0,240,255,.45);
-              animation: slideIn .45s ease-out; }
+              }
 .grow.fresh::before { content: 'NEW'; position: absolute; top: 0; left: calc(var(--u) * 2); transform: translateY(-50%);
               font: 800 calc(var(--u) * 2.2) var(--font-display); color: #000; background: var(--cyan);
               padding: .15em .5em; border-radius: 999px; letter-spacing: .1em; }
+
+/* guess row v2: no temperature badge, the player takes the right side (big avatar + name) */
+.grow { grid-template-columns: calc(var(--u) * 17) minmax(0, 1fr) minmax(0, calc(var(--u) * 33));
+        grid-template-rows: auto auto; row-gap: calc(var(--u) * 1); }
+.grow .rk { grid-row: 1 / span 2; }
+.grow .wd { grid-column: 2; grid-row: 1; }
+.grow .bar { grid-column: 2; grid-row: 2; min-width: 0; }
+.grow .who { grid-column: 3; grid-row: 1 / span 2; display: flex; align-items: center; gap: calc(var(--u) * 1.6);
+             min-width: 0; justify-self: end; }
+.grow .who .av { width: calc(var(--u) * 8.5); height: calc(var(--u) * 8.5); font-size: calc(var(--u) * 4);
+                 border: 2px solid rgba(255,255,255,.55); box-shadow: 0 0 .8em rgba(157,77,255,.6); }
+.grow .who .nm { display: flex; flex-direction: column; min-width: 0; }
+.grow .who .n { font: 700 calc(var(--u) * 4.2)/1.1 var(--font-text); color: #fff; white-space: nowrap;
+                overflow: hidden; text-overflow: ellipsis; }
+.grow .who .cnt { font: 800 calc(var(--u) * 2.8) var(--font-display); color: var(--lime); white-space: nowrap; }
+.grow.more .cnt { animation: pop .5s; }

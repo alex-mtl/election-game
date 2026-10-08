@@ -189,16 +189,16 @@
 
   function guessRow(g, cls) {
     const row = el('div', 'grow ' + (cls || ''));
-    row.append(el('div', 'rk t-' + g.tempKey, '#' + fmt(g.rank)), el('div', 'wd', g.word),
-               el('div', 'tp t-' + g.tempKey, (g.rank <= 10 ? '🔥 ' : g.rank > 1000 ? '❄ ' : '') + g.temp));
-    const meta = el('div', 'meta');
+    // [rank] [word / proximity bar] [big avatar + name] — the player is the star of the row
     const bar = el('div', 'bar t-' + g.tempKey); const fill = el('i');
     fill.style.width = Math.round(closeness(g.rank) * 100) + '%';
     bar.append(fill);
-    const who = el('span', 'who'); who.append(avatar(g.name, g.avatar), el('span', '', g.name));
-    meta.append(bar, who);
-    if (g.count > 1) meta.append(el('span', 'cnt', '×' + g.count));
-    row.append(meta);
+    const who = el('div', 'who');
+    const nm = el('div', 'nm');
+    nm.append(el('span', 'n', g.name));
+    if (g.count > 1) nm.append(el('span', 'cnt', '+' + (g.count - 1) + ' more'));
+    who.append(avatar(g.name, g.avatar), nm);
+    row.append(el('div', 'rk t-' + g.tempKey, '#' + fmt(g.rank)), el('div', 'wd', g.word), who, bar);
     return row;
   }
 
@@ -225,7 +225,7 @@
       const before = prevWords.get(g.word);
       return before === undefined ? 'new' : g.count > before ? 'more' : '';
     };
-    fresh.forEach(f => box.append(guessRow(f, 'fresh')));
+    fresh.forEach(f => { box.append(guessRow(f, 'fresh' + (f.shown ? '' : ' new'))); f.shown = true; });
     const shown = new Set(fresh.map(f => f.word));
     best.filter(g => !shown.has(g.word)).slice(0, 7 - fresh.length).forEach(g => box.append(guessRow(g, mark(g))));
     prevWords = new Map(best.map(g => [g.word, g.count]));
