@@ -28,6 +28,7 @@ DATA_DIR = os.getenv("DATA_DIR", "data")
 ASSETS_DIR = os.getenv("ASSETS_DIR", "assets")
 RECONNECT_SEC = _f("RECONNECT_SEC", 15)
 DEBUG_CONTROLS = _b("DEBUG_CONTROLS", "1")     # /debug page + /api/debug/*
+LOG_CHAT = _b("LOG_CHAT")                      # log every incoming comment (diagnostics)
 DEFAULT_GAME = os.getenv("DEFAULT_GAME", "battle")
 
 # ---- battle (tug of war) ----
