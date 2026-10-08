@@ -48,7 +48,7 @@ body { display: flex; justify-content: center; }
 .grow.new { animation: slideIn .45s ease-out; }
 .grow.more .cnt { animation: pop .5s; }
 .grow .rk { font: 900 calc(var(--u) * 3.9) var(--font-display); grid-row: span 2; white-space: nowrap; }
-.grow .wd { font: 800 calc(var(--u) * 4.6)/1 var(--font-display); letter-spacing: .04em;
+.grow .wd { font: 800 calc(var(--u) * 4.6)/1.15 var(--font-display); letter-spacing: .04em;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .grow .tp { font: 800 calc(var(--u) * 2.8) var(--font-display); padding: .25em .6em; border-radius: 999px;
             border: 1px solid currentColor; white-space: nowrap; }
@@ -199,7 +199,7 @@ body { display: flex; justify-content: center; }
 .grow .wd { grid-column: 2; grid-row: 1; }
 .grow .bar { grid-column: 2; grid-row: 2; min-width: 0; }
 .grow .who { grid-column: 3; grid-row: 1 / span 2; display: flex; align-items: center; gap: calc(var(--u) * 1.6);
-             min-width: 0; justify-self: end; }
+             min-width: 0; max-width: 100%; overflow: hidden; justify-self: end; }
 .grow .who .av { width: calc(var(--u) * 8.5); height: calc(var(--u) * 8.5); font-size: calc(var(--u) * 4);
                  border: 2px solid rgba(255,255,255,.55); box-shadow: 0 0 .8em rgba(157,77,255,.6); }
 .grow .who .nm { display: flex; flex-direction: column; min-width: 0; }

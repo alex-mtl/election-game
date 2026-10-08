@@ -8,6 +8,44 @@
   let S = null;                       // last state
   let vocab = 30000;
 
+  // Put text into a big headline and shrink the font until it fits its container's width
+  // (long words like APPLICATION on the winner / reveal screens). Re-measures only on change.
+  function fitText(node, text) {
+    const parent = node.parentElement;
+    const key = text + '|' + parent.clientWidth;
+    if (node.dataset.fit === key) return;
+    node.dataset.fit = key;
+    node.textContent = text;
+    node.style.fontSize = '';
+    node.style.display = 'inline-block';
+    node.style.whiteSpace = 'nowrap';
+    node.style.maxWidth = 'none';
+    const anim = node.style.animation;
+    node.style.animation = 'none';                       // measure without the letter-spacing intro
+    const cs = getComputedStyle(parent);
+    const avail = parent.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    let size = parseFloat(getComputedStyle(node).fontSize);
+    while (avail > 0 && node.scrollWidth > avail && size > 8) {
+      size *= 0.92;
+      node.style.fontSize = size + 'px';
+    }
+    node.style.animation = anim;
+  }
+
+  // Same for a fixed-width cell (word in BEST GUESSES); the fitted size is cached per word.
+  const cellSize = new Map();
+  function fitCell(node) {
+    const key = node.textContent + '|' + node.clientWidth;
+    if (cellSize.has(key)) { node.style.fontSize = cellSize.get(key); return; }
+    let size = parseFloat(getComputedStyle(node).fontSize);
+    while (node.clientWidth > 0 && node.scrollWidth > node.clientWidth && size > 8) {
+      size *= 0.92;
+      node.style.fontSize = size + 'px';
+    }
+    cellSize.set(key, node.style.fontSize);
+    if (cellSize.size > 500) cellSize.clear();
+  }
+
   function el(tag, cls, text) {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -89,6 +127,7 @@
     c.append(el('div', 'h', t.head));
     if (t.sub) c.append(el('div', 's', t.sub));
     $('toast').replaceChildren(c);
+    c.querySelectorAll('.h, .s').forEach(n => fitText(n, n.textContent));
     setTimeout(() => { $('toast').replaceChildren(); nextToast(); }, (t.hold + 0.4) * 1000);
   }
   function mini(text, cls) {
@@ -228,6 +267,7 @@
     fresh.forEach(f => { box.append(guessRow(f, 'fresh' + (f.shown ? '' : ' new'))); f.shown = true; });
     const shown = new Set(fresh.map(f => f.word));
     best.filter(g => !shown.has(g.word)).slice(0, 7 - fresh.length).forEach(g => box.append(guessRow(g, mark(g))));
+    box.querySelectorAll('.wd').forEach(fitCell);
     prevWords = new Map(best.map(g => [g.word, g.count]));
   }
   setInterval(() => {                       // let expired "NEW" rows drop into place
@@ -259,7 +299,7 @@
     }
     if (w) {
       $('wAvatar').append(avatar(w.name, w.avatar));
-      $('wName').textContent = w.name;
+      fitText($('wName'), w.name);
       $('wSub').textContent = w.reason === 'exact' ? 'found the word:' : 'was the closest! The word:';
       const chips = ['⏱ ' + Math.floor(w.seconds / 60) + ':' + String(w.seconds % 60).padStart(2, '0'),
                      '🎯 ' + w.guesses + ' guesses', '🏅 best #' + fmt(w.best)];
@@ -268,11 +308,11 @@
     } else {
       $('wName').textContent = ''; $('wSub').textContent = 'The word was:';
     }
-    $('wWord').textContent = s.secretWord || '';
+    fitText($('wWord'), s.secretWord || '');
   }
 
   function renderReveal(s) {
-    $('rWord').textContent = s.secretWord || '';
+    fitText($('rWord'), s.secretWord || '');
     const pod = $('podium'); pod.replaceChildren();
     const order = [1, 0, 2];                         // 2nd, 1st, 3rd
     order.forEach(i => {
@@ -311,7 +351,7 @@
     chip.textContent = 'ROUND ' + s.roundId + (s.roundType === 'speed' ? ' · SPEED' : '');
     chip.classList.toggle('speed', s.roundType === 'speed');
     $('playersChip').textContent = '👥 ' + s.stats.players;
-    $('secretWord').textContent = s.secretWord || '? ? ?';
+    fitText($('secretWord'), s.secretWord || '? ? ?');
     $('subs').hidden = !s.subscribersOnly;
     if (s.goal) {
       $('goal').hidden = false;
