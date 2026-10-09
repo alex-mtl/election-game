@@ -1,5 +1,5 @@
 /* Neon theme tokens (menu + Guess the Word). Change colors here. */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&family=Russo+One&family=Exo+2:wght@600;700;800&display=swap');
 
 :root {
   --bg: #07020f;
@@ -25,8 +25,8 @@
   --t-cold: #00e5ff;
   --t-freezing: #5b7cff;
 
-  --font-display: 'Orbitron', 'Segoe UI', system-ui, sans-serif;
-  --font-text: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Orbitron', 'Russo One', 'Segoe UI', system-ui, sans-serif;   /* Russo One = Cyrillic */
+  --font-text: 'Rajdhani', 'Exo 2', 'Segoe UI', system-ui, sans-serif;           /* Exo 2 = Cyrillic */
   /* 9:16 overlay unit: never wider than a phone column, scales with height */
   --u: min(1vw, 0.5625vh);
 }

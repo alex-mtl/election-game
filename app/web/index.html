@@ -31,34 +31,38 @@
   .battle { --c: var(--pink); }
   .guess  { --c: var(--cyan); }
   .foot { color: var(--muted); font-size: calc(var(--u) * 3.4); text-align: center; }
+  .langs { display: flex; align-items: center; gap: calc(var(--u) * 2); font: 800 calc(var(--u) * 3.2) var(--font-display);
+           color: var(--muted); letter-spacing: .15em; }
+  .langs button { font: 900 calc(var(--u) * 3.6) var(--font-display); padding: .45em .9em; border-radius: 999px; cursor: pointer;
+                  background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  .langs button.on { color: #000; background: var(--lime); border-color: var(--lime); box-shadow: 0 0 1em var(--lime); }
 </style>
 </head>
 <body>
   <div>
     <h1><span class="neon-magenta">LIVE</span> <span class="neon-cyan">GAMES</span></h1>
-    <div class="sub">CHOOSE WHAT WE PLAY</div>
+    <div class="sub" data-i18n="menu.sub">CHOOSE WHAT WE PLAY</div>
   </div>
+  <div class="langs"><span data-i18n="menu.lang">LANGUAGE</span>
+    <button data-lang="en">EN</button><button data-lang="ru">RU</button></div>
   <div class="games" id="games"></div>
-  <div class="foot">The game screen follows your choice on every device</div>
+  <div class="foot" data-i18n="menu.foot">The game screen follows your choice on every device</div>
+<script src="/common/i18n.js"></script>
 <script>
-const INFO = {
-  battle: { d: 'Red vs Yellow tug of war. Every comment pulls the bar. New viewers join your team!',
-            chat: 'CHAT:  R  /  Y' },
-  guess:  { d: 'Find the secret word. Every guess shows how close you are. First to find it wins!',
-            chat: 'CHAT:  ANY ENGLISH WORD' },
-};
-async function load() {
-  const r = await (await fetch('/api/games', { cache: 'no-store' })).json();
+const t = I18N.t;
+let state = null;
+function render() {
+  document.querySelectorAll('.langs button').forEach(b => b.classList.toggle('on', b.dataset.lang === state.lang));
   const box = document.getElementById('games');
   box.replaceChildren();
-  r.games.forEach(g => {
+  state.games.forEach(g => {
     const b = document.createElement('button');
-    b.className = 'card ' + g.name + (g.name === r.active ? ' active' : '');
-    const now = document.createElement('div'); now.className = 'now'; now.textContent = 'NOW PLAYING';
-    const t = document.createElement('div'); t.className = 't'; t.textContent = g.title.toUpperCase();
-    const d = document.createElement('div'); d.className = 'd'; d.textContent = (INFO[g.name] || {}).d || '';
-    const c = document.createElement('div'); c.className = 'chat'; c.textContent = (INFO[g.name] || {}).chat || '';
-    b.append(now, t, d, c);
+    b.className = 'card ' + g.name + (g.name === state.active ? ' active' : '');
+    const now = document.createElement('div'); now.className = 'now'; now.textContent = t('menu.now');
+    const ti = document.createElement('div'); ti.className = 't'; ti.textContent = t('game.' + g.name);
+    const d = document.createElement('div'); d.className = 'd'; d.textContent = t('menu.' + g.name + '.d');
+    const c = document.createElement('div'); c.className = 'chat'; c.textContent = t('menu.' + g.name + '.chat');
+    b.append(now, ti, d, c);
     b.onclick = async () => {
       await fetch('/api/active', { method: 'POST', headers: { 'Content-Type': 'application/json' },
                                    body: JSON.stringify({ game: g.name }) });
@@ -66,6 +70,17 @@ async function load() {
     };
     box.appendChild(b);
   });
+}
+document.querySelectorAll('.langs button').forEach(b => b.onclick = async () => {
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify({ lang: b.dataset.lang }) });
+  load();
+});
+async function load() {
+  state = await (await fetch('/api/games', { cache: 'no-store' })).json();
+  I18N.set(state.lang);
+  I18N.apply();
+  render();
 }
 load();
 </script>

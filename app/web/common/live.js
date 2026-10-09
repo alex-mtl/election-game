@@ -12,6 +12,10 @@ window.Live = (() => {
       if (version && msg.version !== version) { location.reload(); return; }
       version = msg.version;
     }
+    if (msg.lang && window.I18N) {                 // language picked in the menu
+      if (I18N.lang && I18N.lang !== msg.lang) { location.reload(); return; }
+      I18N.set(msg.lang);
+    }
     if (opts.game && msg.active && msg.active !== opts.game) {
       location.href = '/' + msg.active + '/' + location.search;
       return;

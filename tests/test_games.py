@@ -132,6 +132,36 @@ class GuessTest(unittest.TestCase):
         self.assertNotEqual(h["word"].lower(), g.secret)
 
 
+class RussianTest(unittest.TestCase):
+    def test_russian_round(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        self.assertIn("ru", g.sems)
+        g.set_lang("ru")
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        self.assertEqual(g.round_lang, "ru")
+        self.assertRegex(g.secret, r"^[а-я]+$")
+        n = g.sem.normalize
+        self.assertEqual(n("Кошки!")[0], "кошка")             # inflected form -> lemma
+        self.assertEqual(n("ёлка")[0], n("елка")[0])           # ё == е
+        self.assertEqual(n("cat"), (None, None))                # latin in RU mode: not a guess
+        rank = lambda w: int(g.rank[g.sem.index[w]])
+        r, _ = g.sem.ranking("собака")
+        idx = g.sem.index
+        self.assertLess(r[idx["щенок"]], r[idx["налог"]])
+        g.on_comment(Viewer("ivan", "Иван", "", 1), g.secret)  # exact Russian guess wins
+        self.assertEqual(g.winner["name"], "Иван")
+
+    def test_switch_language_starts_new_round(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        en_secret = g.secret
+        g.set_lang("ru")
+        g.tick(time.time())
+        self.assertEqual(g.phase, guess_mod.COUNTDOWN)
+        self.assertNotEqual(g.secret, en_secret)
+        self.assertEqual(g.round_lang, "ru")
+
+
 class GiftHintTest(unittest.TestCase):
     def test_gift_hint_counts_as_gifter_guess(self):
         config.GIFT_HINT_NAMES = ["rose"]

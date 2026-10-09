@@ -20,28 +20,28 @@
   </header>
 
   <section id="secret" class="panel">
-    <div class="label">SECRET WORD</div>
+    <div class="label" data-i18n="g.secret">SECRET WORD</div>
     <div id="secretWord" class="neon-magenta">? ? ?</div>
     <div id="tagline"></div>
   </section>
 
   <section id="hunters" class="panel">
-    <div class="title"><span class="neon-gold">TOP HUNTERS</span></div>
+    <div class="title"><span class="neon-gold" data-i18n="g.hunters">TOP HUNTERS</span></div>
     <ol id="hunterList"></ol>
   </section>
 
   <section id="recent" class="panel">
-    <div class="title"><span class="neon-cyan">BEST GUESSES</span></div>
+    <div class="title"><span class="neon-cyan" data-i18n="g.best">BEST GUESSES</span></div>
     <div id="guessList"></div>
   </section>
 
   <section id="events">
-    <div id="hintCard" hidden><span class="hk">💡 HINT</span><span id="hintText"></span><b id="hintWord"></b></div>
+    <div id="hintCard" hidden><span class="hk" data-i18n="g.hint">💡 HINT</span><span id="hintText"></span><b id="hintWord"></b></div>
   </section>
 
   <footer id="bottom">
-    <div id="subs" hidden>🔒 SUBSCRIBERS ONLY</div>
-    <div id="cta"><span class="neon-lime">TYPE ONE ENGLISH WORD IN CHAT</span></div>
+    <div id="subs" hidden data-i18n="g.subs">🔒 SUBSCRIBERS ONLY</div>
+    <div id="cta"><span class="neon-lime" data-i18n="g.cta">TYPE ONE ENGLISH WORD IN CHAT</span></div>
   </footer>
 
   <!-- overlays -->
@@ -58,44 +58,45 @@
   </div>
   <div id="reveal" class="overlay" hidden>
     <div id="rResults" class="rpart">
-      <div class="rlabel">THE SECRET WORD WAS</div>
+      <div class="rlabel" data-i18n="g.r.was">THE SECRET WORD WAS</div>
       <div class="rword neon-magenta" id="rWord"></div>
       <div class="podium" id="podium"></div>
       <div class="rcols">
-        <div class="panel rbox"><div class="title"><span class="neon-cyan">BEST GUESSES</span></div><div id="rBest"></div></div>
-        <div class="panel rbox"><div class="title"><span class="neon-gold">STREAM LEADERS</span></div><div id="rStream"></div></div>
+        <div class="panel rbox"><div class="title"><span class="neon-cyan" data-i18n="g.best">BEST GUESSES</span></div><div id="rBest"></div></div>
+        <div class="panel rbox"><div class="title"><span class="neon-gold" data-i18n="g.r.leaders">STREAM LEADERS</span></div><div id="rStream"></div></div>
       </div>
     </div>
     <!-- second part of the break: promote follow / subscribe / joining the next round -->
     <div id="lobby" class="rpart" hidden>
-      <div class="lk">NEXT ROUND IN</div>
+      <div class="lk" data-i18n="g.l.next">NEXT ROUND IN</div>
       <div class="ltime neon-cyan" id="lTime">2:00</div>
       <div class="promo" id="promo"></div>
       <div class="panel lhow">
-        <div class="title"><span class="neon-lime">HOW TO PLAY</span></div>
-        <div>Type <b>one English word</b> in chat — see how close you are — find the secret word first!</div>
+        <div class="title"><span class="neon-lime" data-i18n="g.l.how">HOW TO PLAY</span></div>
+        <div data-i18n-html="g.l.howText">Type <b>one English word</b> in chat — see how close you are — find the secret word first!</div>
       </div>
-      <div class="panel lleaders"><div class="title"><span class="neon-gold">STREAM LEADERS</span></div><div id="lStream"></div></div>
+      <div class="panel lleaders"><div class="title"><span class="neon-gold" data-i18n="g.r.leaders">STREAM LEADERS</span></div><div id="lStream"></div></div>
     </div>
     <div class="rnext" id="rNext"></div>
   </div>
   <div id="rules" class="overlay" hidden>
     <div class="panel rulesbox">
-      <div class="title"><span class="neon-cyan">HOW TO PLAY</span></div>
+      <div class="title"><span class="neon-cyan" data-i18n="g.rules.title">HOW TO PLAY</span></div>
       <ol>
-        <li>Type <b>one English word</b> in the TikTok chat.</li>
-        <li>You'll see <b>how close</b> your word is.</li>
-        <li>The <b>smaller the rank</b>, the closer you are.</li>
-        <li>Find the secret word <b>first</b> to win!</li>
+        <li data-i18n-html="g.rules.1">Type <b>one English word</b> in the TikTok chat.</li>
+        <li data-i18n-html="g.rules.2">You'll see <b>how close</b> your word is.</li>
+        <li data-i18n-html="g.rules.3">The <b>smaller the rank</b>, the closer you are.</li>
+        <li data-i18n-html="g.rules.4">Find the secret word <b>first</b> to win!</li>
       </ol>
       <div class="temps">
-        <span class="t-burning">#2–10 BURNING</span><span class="t-hot">#51–200 HOT</span><span class="t-cold">COLD</span>
+        <span class="t-burning" data-i18n="g.rules.burning">#2–10 BURNING</span><span class="t-hot" data-i18n="g.rules.hot">#51–200 HOT</span><span class="t-cold" data-i18n="g.rules.cold">COLD</span>
       </div>
     </div>
   </div>
   <div id="error" class="overlay" hidden><div class="panel errbox" id="errText"></div></div>
 </div>
 
+<script src="/common/i18n.js"></script>
 <script src="/common/live.js"></script>
 <script src="/common/audio.js"></script>
 <script src="/guess/guess.js"></script>

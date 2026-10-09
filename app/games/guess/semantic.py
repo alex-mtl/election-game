@@ -9,10 +9,13 @@ import re
 import numpy as np
 
 ARTICLES = {"a", "an", "the"}
+# letters of a guess per language (anything else in a single-word message = not a guess)
+LETTERS = {"en": "a-z", "ru": "а-яё"}
 
 
 class SemanticIndex:
-    def __init__(self, assets_dir):
+    def __init__(self, assets_dir, lang="en"):
+        self.lang = lang
         with open(os.path.join(assets_dir, "vocab.txt"), encoding="utf-8") as f:
             self.words = [w.strip() for w in f if w.strip()]
         self.index = {w: i for i, w in enumerate(self.words)}
@@ -25,14 +28,15 @@ class SemanticIndex:
         self.pools = meta.get("pools", {})
         self.categories = meta.get("categories", {})
         self.size = len(self.words)
-        print(f"[semantic] {self.size} words, pools "
+        print(f"[semantic {lang}] {self.size} words, pools "
               f"{ {k: len(v) for k, v in self.pools.items()} }")
 
     def normalize(self, text):
         """Chat message -> dictionary word, or None if it isn't a single-word guess.
         Returns (word, raw) where word may be None for unknown words."""
-        text = (text or "")[:60].strip().lower()
-        tokens = re.findall(r"[a-z]+(?:['-][a-z]+)*", text)
+        text = (text or "")[:60].strip().lower().replace("ё", "е")
+        letters = LETTERS.get(self.lang, "a-z")
+        tokens = re.findall(rf"[{letters}]+(?:['-][{letters}]+)*", text)
         if len(tokens) == 2 and tokens[0] in ARTICLES:
             tokens = tokens[1:]
         if len(tokens) != 1:

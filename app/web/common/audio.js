@@ -6,7 +6,8 @@
 window.AudioKit = (() => {
   const qs = new URLSearchParams(location.search);
   const synth = window.speechSynthesis;
-  let ctx = null, muted = false, voice = null;
+  let ctx = null, muted = false, voice = null, lang = 'en';
+  const T = (k, p) => (window.I18N ? I18N.t(k, p) : k);
   try { muted = localStorage.getItem('muted') === '1'; } catch (e) {}
   if (qs.get('sound') === '0') muted = true;
 
@@ -34,6 +35,11 @@ window.AudioKit = (() => {
 
   // ---------- voice: female, Chinese-speaker accent preferred ----------
   // Edge online voices: Luna (en-SG), Xiaoxiao (zh-CN), Yan (en-HK); fallback female English.
+  const RU_PREFS = [                              // Russian: female voices (Edge online / Windows / macOS)
+    ...['svetlana', 'dariya', 'irina', 'ekaterina', 'milena', 'alena', 'yuliya', 'female']
+      .map(n => v => /^ru/i.test(v.lang) && v.name.toLowerCase().includes(n)),
+    v => /^ru/i.test(v.lang),
+  ];
   const VOICE_PREFS = [
     v => /luna/i.test(v.name) && /en-SG/i.test(v.lang),
     v => /xiaoxiao|xiaoyi/i.test(v.name),
@@ -45,15 +51,17 @@ window.AudioKit = (() => {
   ];
   function femaleVoices() {
     const vs = synth ? synth.getVoices() : [], out = [];
-    VOICE_PREFS.forEach(p => vs.filter(p).forEach(v => { if (!out.includes(v)) out.push(v); }));
+    (lang === 'ru' ? RU_PREFS : VOICE_PREFS).forEach(p => vs.filter(p).forEach(v => { if (!out.includes(v)) out.push(v); }));
     return out;
   }
+  const voiceKey = () => (lang === 'en' ? 'voice' : 'voice_' + lang);
   function pickVoice() {
     const vs = synth ? synth.getVoices() : [];
     let want = qs.get('voice');
-    if (!want) { try { want = localStorage.getItem('voice'); } catch (e) {} }
-    voice = (want && vs.find(v => v.name.toLowerCase().includes(want.toLowerCase())))
-         || femaleVoices()[0] || vs.find(v => /^en/i.test(v.lang)) || null;
+    if (!want) { try { want = localStorage.getItem(voiceKey()); } catch (e) {} }
+    const fits = v => (lang === 'ru' ? /^ru/i : /^(en|zh)/i).test(v.lang);
+    voice = (want && vs.find(v => fits(v) && v.name.toLowerCase().includes(want.toLowerCase())))
+         || femaleVoices()[0] || vs.find(v => new RegExp('^' + lang, 'i').test(v.lang)) || null;
   }
   if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
 
@@ -63,7 +71,7 @@ window.AudioKit = (() => {
     if (o.urgent) synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     if (voice) u.voice = voice;
-    u.lang = voice ? voice.lang : 'en-US'; u.volume = 1;
+    u.lang = voice ? voice.lang : (lang === 'ru' ? 'ru-RU' : 'en-US'); u.volume = 1;
     u.rate = o.excited ? 1.2 : 1.05; u.pitch = o.excited ? 1.35 : 1.05;
     if (o.onend) u.onend = o.onend;
     synth.speak(u);
@@ -72,8 +80,8 @@ window.AudioKit = (() => {
     const list = femaleVoices();
     if (!list.length) return;
     voice = list[(list.indexOf(voice) + 1) % list.length];
-    try { localStorage.setItem('voice', voice.name); } catch (e) {}
-    say('Hi! I am ' + voice.name.replace(/Microsoft|Online|\(Natural\)|-.*$/g, '').trim() + '.', { urgent: true });
+    try { localStorage.setItem(voiceKey(), voice.name); } catch (e) {}
+    say(T('voice.hello', { name: voice.name.replace(/Microsoft|Online|\(Natural\)|-.*$/g, '').trim() }), { urgent: true });
   }
 
   // ---------- controls ----------
@@ -88,31 +96,37 @@ window.AudioKit = (() => {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
     ctx.resume();
   }
-  function btn(icon, title, onclick) {
+  function btn(icon, titleKey, onclick) {
     const b = document.createElement('button');
-    b.className = 'ctl-btn'; b.textContent = icon; b.title = title; b.onclick = onclick;
+    b.className = 'ctl-btn'; b.textContent = icon; b.dataset.i18nTitle = titleKey; b.title = T(titleKey);
+    b.onclick = onclick;
     return b;
   }
   function mount(o) {
     o = o || {};
     const bar = document.createElement('div'); bar.className = 'ctl-bar';
-    bar.appendChild(btn('☰', 'Choose game', () => { location.href = '/'; }));
-    if (o.rules) bar.appendChild(btn('?', 'How to play', o.rules));
-    bar.appendChild(btn('🗣', 'Next voice', () => { enable(); setMuted(false); nextVoice(); }));
-    muteBtn = btn('🔊', 'Sound on/off', () => { enable(); setMuted(!muted); });
+    bar.appendChild(btn('☰', 'ctl.menu', () => { location.href = '/'; }));
+    if (o.rules) bar.appendChild(btn('?', 'ctl.rules', o.rules));
+    bar.appendChild(btn('🗣', 'ctl.voice', () => { enable(); setMuted(false); nextVoice(); }));
+    muteBtn = btn('🔊', 'ctl.mute', () => { enable(); setMuted(!muted); });
     bar.appendChild(muteBtn);
     document.body.appendChild(bar);
     setMuted(muted);
     if (!muted) {
       const ov = document.createElement('div'); ov.className = 'ctl-unlock';
-      const b = document.createElement('button'); b.textContent = '🔊 Click to enable sound';
+      const b = document.createElement('button'); b.dataset.i18n = 'unlock'; b.textContent = T('unlock');
       ov.appendChild(b); document.body.appendChild(ov);
-      ov.onclick = () => { enable(); ov.remove(); say(o.hello || "Sound on. Let's play!"); };
+      ov.onclick = () => { enable(); ov.remove(); say(T(o.hello || 'b.v.hello')); };
     }
   }
 
+  function setLang(l) {
+    lang = l;
+    pickVoice();
+  }
+
   return {
-    tone, noise, say, mount, enable,
+    tone, noise, say, mount, enable, setLang,
     get ready() { return !!ctx && !muted; },
     get speaking() { return !!synth && (synth.speaking || synth.pending); },
   };

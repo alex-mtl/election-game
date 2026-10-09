@@ -29,6 +29,22 @@ MAX_WORDS = 5000              # cap of aggregated words per round (memory guard)
 SIM_NAMES = ["Alex", "Mike", "Sarah", "John", "Emma", "Liam", "Olivia", "Noah", "Mia", "Leo"]
 
 
+def load_indexes(assets_dir):
+    """{lang: SemanticIndex} for every language folder in assets (assets/en, assets/ru...)."""
+    from .semantic import SemanticIndex
+    out = {}
+    try:
+        if os.path.exists(os.path.join(assets_dir, "vocab.txt")):     # old single-language layout
+            out["en"] = SemanticIndex(assets_dir, "en")
+        for lang in sorted(os.listdir(assets_dir)):
+            path = os.path.join(assets_dir, lang)
+            if os.path.isfile(os.path.join(path, "vocab.txt")):
+                out[lang] = SemanticIndex(path, lang)
+    except Exception as e:
+        print(f"[guess] can't load word assets: {type(e).__name__}: {e}")
+    return out
+
+
 def temperature(rank):
     for bound, label in zip(config.TEMPERATURE_BOUNDS, TEMPS):
         if rank <= bound:
@@ -49,15 +65,17 @@ class GuessGame(BaseGame):
 
     def __init__(self, store):
         super().__init__(store)
-        self.sem, self.error = None, None
-        try:
-            from .semantic import SemanticIndex
-            self.sem = SemanticIndex(config.ASSETS_DIR)
-        except Exception as e:
-            self.error = f"semantic engine unavailable: {type(e).__name__}: {e}"
+        self.sems, self.error = load_indexes(config.ASSETS_DIR), None
+        if not self.sems:
+            self.error = f"semantic engine unavailable: no word assets in {config.ASSETS_DIR}"
             print("[guess]", self.error)
+        self.lang = config.LANGUAGE if config.LANGUAGE in self.sems else next(iter(self.sems), "en")
+        self.round_lang = self.lang                  # language of the round being played
         self.stats = SessionStats(store)
-        self.used = set(store.load(self.USED, []))
+        used = store.load(self.USED, {})
+        if isinstance(used, list):                   # old format: English only
+            used = {"en": used}
+        self.used = {k: set(v) for k, v in used.items()}
         self.history = store.load(self.ROUNDS, [])
         self.round_id = 0
         self.difficulty = []          # (solved, seconds, best rank) of recent rounds
@@ -92,9 +110,11 @@ class GuessGame(BaseGame):
         self.round_id += 1
         every = config.SPEED_ROUND_EVERY
         self.round_type = "speed" if every and self.round_id % every == 0 else "normal"
-        self.secret, self.tier = self.sem.pick_secret(self._next_tier(), self.used)
-        self.used.add(self.secret)
-        self.store.save(self.USED, sorted(self.used))
+        self.round_lang = self.lang
+        used = self.used.setdefault(self.lang, set())
+        self.secret, self.tier = self.sem.pick_secret(self._next_tier(), used)
+        used.add(self.secret)
+        self.store.save(self.USED, {k: sorted(v) for k, v in self.used.items()})
         self.rank, self.order = self.sem.ranking(self.secret)
         self.phase = COUNTDOWN
         self.phase_until = now + config.COUNTDOWN_SEC
@@ -313,7 +333,7 @@ class GuessGame(BaseGame):
         h["by"] = source
         self.hints.append(h)
         self.last_hint_t = now
-        self.emit("hint", kind=h["type"], text=h["text"], word=h["word"], by=source)
+        self.emit("hint", kind=h["type"], text=h["text"], word=h["word"], n=h.get("n"), by=source)
         print(f"[guess] hint ({h['type']}) by {source}")
         word = h["word"].lower()
         if viewer is not None and h["type"] == "semantic" and word in self.sem.index:
@@ -360,14 +380,29 @@ class GuessGame(BaseGame):
     def new_session(self):
         self.stats.reset()
         self.stats.save()
-        self.used = set()
-        self.store.save(self.USED, [])
+        self.used = {}
+        self.store.save(self.USED, {})
         self.round_id = 0
         self.difficulty = []
         self.tier = "easy"
         self._clear_round()
         self.phase = IDLE
         self.dirty = True
+
+    @property
+    def sem(self):
+        return self.sems.get(self.round_lang) or self.sems.get(self.lang)
+
+    def set_lang(self, lang):
+        """Switch the word language: the current round is dropped and a new one starts."""
+        if lang == self.lang or lang not in self.sems:
+            return
+        self.lang = lang
+        if self.phase in (COUNTDOWN, PLAYING) and self.round_lang != lang:
+            self._clear_round()
+            self.phase = IDLE
+        self.dirty = True
+        print(f"[guess] language -> {lang}")
 
     def tick(self, now):
         if not self.sem or self.paused_at:
@@ -522,7 +557,8 @@ class GuessGame(BaseGame):
             "temps": dict(zip(TEMPS, config.TEMPERATURE_BOUNDS + [None])),
             "subscribersOnly": config.SUBSCRIBERS_ONLY,
             "breakSec": config.REVEAL_SEC, "resultsSec": config.RESULTS_SEC,
-            "promo": config.PROMO_LINES,
+            "promo": config.PROMO_LINES_RU if self.lang == "ru" else config.PROMO_LINES,
+            "lang": self.round_lang, "languages": sorted(self.sems),
             "goal": {"label": config.GOAL_LABEL, "value": self.stats.follows,
                      "target": config.GOAL_TARGET} if config.GOAL_TARGET else None,
         }
@@ -540,14 +576,16 @@ class GuessGame(BaseGame):
             "winner": self.winner, "podium": self.podium, "exact_order": self.exact_order,
             "hints": self.hints, "auto_hint_done": self.auto_hint_done,
             "finished_at": self.finished_at, "difficulty": self.difficulty,
-            "saved_at": self.paused_at or time.time(),
+            "saved_at": self.paused_at or time.time(), "lang": self.round_lang,
         })
 
     def load(self):
         d = self.store.load(self.STATE)
-        if not d or not self.sem:
+        if not d or not self.sems:
             return
         try:
+            if d.get("lang") in self.sems:
+                self.round_lang = d["lang"]
             self.round_id = d["round_id"]
             self.tier = d.get("tier", "easy")
             self.difficulty = [tuple(x) for x in d.get("difficulty", [])]

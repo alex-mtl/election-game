@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Build the word assets for "Guess the Word" (runs once, in the Docker build stage).
+Build the word assets for "Guess the Word" (once per language, in the Docker build stage):
+    python build_assets.py --lang en --out assets/en
+    python build_assets.py --lang ru --out assets/ru   (see lang_ru.py)
 
 Output (--out dir):
   vocab.txt          every guessable word (lemmas), most frequent first
   embeddings.npy     float16 [len(vocab), 384], L2-normalized, row i = vocab[i]
-  english_nouns.txt  secret-word pool (common singular nouns)
+  secret_nouns.txt   secret-word pool (common singular nouns)
   meta.json          pools by difficulty, inflection aliases, categories, sources
 
 Sources:
@@ -106,15 +108,11 @@ def secret_noun_ok(w, vocab_set):
     return noun_n >= 1 and noun_n >= 2 * other_n  # noun is the dominant use (SemCor)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="assets")
-    ap.add_argument("--vocab-size", type=int, default=30000)
-    ap.add_argument("--model", default="sentence-transformers/all-MiniLM-L6-v2")
-    args = ap.parse_args()
-    os.makedirs(args.out, exist_ok=True)
-    t0 = time.time()
+MODELS = {"en": "sentence-transformers/all-MiniLM-L6-v2",   # Apache 2.0
+          "ru": "cointegrated/rubert-tiny2"}                 # MIT
 
+
+def build_en(vocab_size):
     bad = profanity_set()
     vocab, aliases, seen = [], {}, set()
     for w in top_n_list("en", 120000):
@@ -122,7 +120,7 @@ def main():
             continue
         seen.add(w)
         if is_lemma(w):
-            if len(vocab) < args.vocab_size:
+            if len(vocab) < vocab_size:
                 vocab.append(w)
         else:
             lemma = wn.morphy(w)
@@ -130,7 +128,7 @@ def main():
                 aliases[w] = lemma
     vocab_set = set(vocab)
     aliases = {k: v for k, v in aliases.items() if v in vocab_set}
-    print(f"[vocab] {len(vocab)} words, {len(aliases)} aliases ({time.time() - t0:.0f}s)")
+    print(f"[vocab en] {len(vocab)} words, {len(aliases)} aliases")
 
     pools = {k: [] for k in TIERS}
     categories = {}
@@ -144,32 +142,50 @@ def main():
                 lex = next(s for s in wn.synsets(w) if s.pos() == "n").lexname()
                 categories[w] = CATEGORIES.get(lex, "THINGS")
                 break
-    print("[pools]", {k: len(v) for k, v in pools.items()})
+    print("[pools en]", {k: len(v) for k, v in pools.items()})
+    checks = [("ocean", ["sea", "water", "wave"], ["computer", "banana"]),
+              ("dog", ["puppy", "cat"], ["volcano", "invoice"])]
+    sources = ["wordfreq (MIT / CC BY-SA 4.0)", "WordNet 3.0", "better_profanity (MIT)"]
+    return vocab, aliases, pools, categories, sources, checks
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--lang", default="en", choices=sorted(MODELS))
+    ap.add_argument("--out", default="assets/en")
+    ap.add_argument("--vocab-size", type=int, default=30000)
+    args = ap.parse_args()
+    os.makedirs(args.out, exist_ok=True)
+    t0 = time.time()
+
+    if args.lang == "ru":
+        from lang_ru import build_ru
+        build = build_ru
+    else:
+        build = build_en
+    vocab, aliases, pools, categories, sources, checks = build(args.vocab_size)
+    model_name = MODELS[args.lang]
 
     from sentence_transformers import SentenceTransformer
-    model = SentenceTransformer(args.model, device="cpu")
+    model = SentenceTransformer(model_name, device="cpu")
     emb = model.encode(vocab, batch_size=512, normalize_embeddings=True,
                        show_progress_bar=False, convert_to_numpy=True)
     np.save(os.path.join(args.out, "embeddings.npy"), emb.astype(np.float16))
-    print(f"[embeddings] {emb.shape} ({time.time() - t0:.0f}s)")
+    print(f"[embeddings {args.lang}] {emb.shape} ({time.time() - t0:.0f}s)")
 
     with open(os.path.join(args.out, "vocab.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(vocab) + "\n")
-    with open(os.path.join(args.out, "english_nouns.txt"), "w", encoding="utf-8") as f:
-        f.write("\n".join(w for t in TIERS for w in pools[t]) + "\n")
+    with open(os.path.join(args.out, "secret_nouns.txt"), "w", encoding="utf-8") as f:
+        f.write("\n".join(w for t in pools for w in pools[t]) + "\n")
     with open(os.path.join(args.out, "meta.json"), "w", encoding="utf-8") as f:
-        json.dump({
-            "model": args.model,
-            "sources": ["wordfreq (MIT / CC BY-SA 4.0)", "WordNet 3.0",
-                        "better_profanity (MIT)", args.model + " (Apache 2.0)"],
-            "pools": pools, "aliases": aliases, "categories": categories,
-        }, f)
+        json.dump({"lang": args.lang, "model": model_name, "sources": sources + [model_name],
+                   "pools": pools, "aliases": aliases, "categories": categories},
+                  f, ensure_ascii=False)
 
     # semantic sanity check (ordering, not exact ranks)
     idx = {w: i for i, w in enumerate(vocab)}
     e = emb.astype(np.float32)
-    for secret, near, far in [("ocean", ["sea", "water", "wave"], ["computer", "banana"]),
-                              ("dog", ["puppy", "cat"], ["volcano", "invoice"])]:
+    for secret, near, far in checks:
         if secret not in idx:
             continue
         sims = e @ e[idx[secret]]
@@ -177,8 +193,8 @@ def main():
         rank[np.argsort(-sims)] = np.arange(1, len(vocab) + 1)
         r = {w: int(rank[idx[w]]) for w in near + far if w in idx}
         ok = max(r.get(w, 0) for w in near) < min(r.get(w, 10**9) for w in far)
-        print(f"[check] {secret}: {r} -> {'OK' if ok else 'WARN'}")
-    print(f"[done] {time.time() - t0:.0f}s")
+        print(f"[check {args.lang}] {secret}: {r} -> {'OK' if ok else 'WARN'}")
+    print(f"[done {args.lang}] {time.time() - t0:.0f}s")
 
 
 if __name__ == "__main__":

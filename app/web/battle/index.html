@@ -20,6 +20,7 @@
   .label { position:absolute; top:8vh; left:0; right:0; text-align:center; font-size:7vw;
            font-weight:900; letter-spacing:1px; white-space:nowrap; }
   #colRed .label { color:#ffd43b; text-shadow:0 2px 8px rgba(0,0,0,.45); }
+  html[lang="ru"] .label { font-size:5.6vw; }
   #colYel .label { color:#e03131; text-shadow:0 0 3px #fff, 0 1px 6px rgba(255,255,255,.5); }
   .pct { font-size:16vw; font-weight:900; text-shadow:0 2px 12px rgba(0,0,0,.35); }
   .taps { font-size:6vw; font-weight:700; opacity:.9; margin-top:1vh; }
@@ -55,33 +56,34 @@
 </div>
 <div id="cols">
   <div id="colRed" class="col">
-    <div class="label">Red</div>
-    <div class="team">Type R</div><div class="pct" id="redPct">50%</div>
+    <div class="label" data-i18n="b.red">Red</div>
+    <div class="team" data-i18n="b.typeR">Type R</div><div class="pct" id="redPct">50%</div>
     <div class="taps">👆 <span id="redTaps">0</span></div>
   </div>
   <div id="colYel" class="col">
-    <div class="label">Yellow</div>
-    <div class="team">Type Y</div><div class="pct" id="yelPct">50%</div>
+    <div class="label" data-i18n="b.yellow">Yellow</div>
+    <div class="team" data-i18n="b.typeY">Type Y</div><div class="pct" id="yelPct">50%</div>
     <div class="taps">👆 <span id="yelTaps">0</span></div>
   </div>
 </div>
 <div id="round">Round 1</div>
 <div id="vs">VS</div>
 <div id="leaders"><div class="top3" id="topRed"></div><div class="top3" id="topYel"></div></div>
-<div id="hint">Type <b>R</b> in chat for Red, <b>Y</b> for Yellow. Tap as many times as you want!</div>
+<div id="hint" data-i18n-html="b.hint">Type <b>R</b> in chat for Red, <b>Y</b> for Yellow. Tap as many times as you want!</div>
 <div id="win"><h1 id="winTitle"></h1><p id="winMvp"></p></div>
 
+<script src="/common/i18n.js"></script>
 <script src="/common/live.js"></script>
 <script src="/common/audio.js"></script>
 <script>
-const A = AudioKit;
+const A = AudioKit, t = I18N.t;
 function renderTop(id, list){
   const el = document.getElementById(id);
   el.replaceChildren();
-  list.forEach((t, i) => {
+  list.forEach((item, i) => {
     const row = document.createElement('div'); row.className = 'row';
-    const n = document.createElement('span'); n.textContent = (i + 1) + '. ' + t[0];
-    const v = document.createElement('span'); v.textContent = t[1];
+    const n = document.createElement('span'); n.textContent = (i + 1) + '. ' + item[0];
+    const v = document.createElement('span'); v.textContent = item[1];
     row.append(n, v); el.appendChild(row);
   });
 }
@@ -126,7 +128,7 @@ function fx(kind, color){
 
 // ---------------- voice ----------------
 const cleanName = n => (n || '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim() || 'Someone';
-const teamName = c => c === 'red' ? 'Red' : 'Yellow';
+const teamName = c => t(c === 'red' ? 'b.team.red' : 'b.team.yellow');
 let pending = [], leads = {};
 function say(text, urgent, excited){
   if (urgent) { pending = []; leads = {}; }
@@ -135,13 +137,13 @@ function say(text, urgent, excited){
 // "Yellow team scores, thanks to <who typed / who joined>!"
 // + for joins: "But the point goes to <last R/Y commenter>!"
 function announce(e){
-  say(teamName(e.color) + ' team scores, thanks to ' + cleanName(e.name) + '!');
-  if (e.type === 'join') say('But the point goes to ' + cleanName(e.by) + '!', false, true);
+  say(t('b.v.scores', {team: teamName(e.color), name: cleanName(e.name)}));
+  if (e.type === 'join') say(t('b.v.pointTo', {name: cleanName(e.by)}), false, true);
 }
 // leader change inside a team, sports-commentary style
 function announceLead(e){
-  say(cleanName(e.name) + ' takes the lead for Team ' + teamName(e.color) + '!', false, true);
-  say(cleanName(e.prev) + ' drops to second!');
+  say(t('b.v.lead', {name: cleanName(e.name), team: teamName(e.color)}), false, true);
+  say(t('b.v.second', {name: cleanName(e.prev)}));
 }
 // taps/joins pile up while speaking -> next phrase summarizes them;
 // leader changes are never merged (only the latest per team is kept)
@@ -152,9 +154,8 @@ function flush(){
   if (evs.length === 1) announce(evs[0]);
   else if (evs.length > 1) {
     const r = evs.filter(e => e.color === 'red').length, y = evs.length - r;
-    const pts = n => n + (n === 1 ? ' point' : ' points');
-    say([r && 'Red team scores ' + pts(r), y && 'Yellow team scores ' + pts(y)]
-        .filter(Boolean).join('! ') + '!', false, true);
+    const sum = (c, n) => t('b.v.sum', {team: teamName(c), pts: I18N.n(n, 'point')});
+    say([r && sum('red', r), y && sum('yellow', y)].filter(Boolean).join('! ') + '!', false, true);
   }
   Object.values(leads).forEach(announceLead); leads = {};
 }
@@ -165,8 +166,8 @@ function handleEvent(e){
   else if (e.type === 'lead') { fx('lead', e.color); leads[e.color] = e; flush(); }
   else if (e.type === 'win') {
     fx('win');
-    say(teamName(e.color) + ' wins!' + (e.name ? ' MVP: ' + cleanName(e.name) + '!' : ''), true);
-  } else if (e.type === 'round') { fx('round'); say('Round ' + e.round + '. Go!', true); }
+    say(t('b.v.win', {team: teamName(e.color)}) + (e.name ? t('b.v.mvp', {name: cleanName(e.name)}) : ''), true);
+  } else if (e.type === 'round') { fx('round'); say(t('b.v.round', {n: e.round}), true); }
 }
 
 // ---------------- state ----------------
@@ -177,20 +178,20 @@ function render(s){
   document.getElementById('yelPct').textContent = s.yellow_pct + '%';
   document.getElementById('redTaps').textContent = s.taps_red;
   document.getElementById('yelTaps').textContent = s.taps_yellow;
-  document.getElementById('round').textContent = 'Round ' + s.round;
+  document.getElementById('round').textContent = t('b.round', {n: s.round});
   renderTop('topRed', s.top_red);
   renderTop('topYel', s.top_yellow);
   const w = document.getElementById('win');
   if (s.winner) {
     w.className = 'show ' + (s.winner === 'red' ? 'red' : 'yellow');
     document.getElementById('winTitle').textContent =
-      s.winner === 'red' ? '🏆 RED WINS!' : '🏆 YELLOW WINS!';
+      t(s.winner === 'red' ? 'b.redWins' : 'b.yellowWins');
     document.getElementById('winMvp').textContent =
-      s.mvp ? ('MVP: ' + s.mvp + ' — ' + s.mvp_taps + ' taps') : '';
+      s.mvp ? t('b.mvp', {name: s.mvp, taps: I18N.n(s.mvp_taps, 'tap')}) : '';
   } else { w.className = ''; }
 }
 
-A.mount();
+A.mount({hello: 'b.v.hello'});
 Live.start({game: 'battle', onState: render, onEvent: handleEvent});
 </script>
 </body>

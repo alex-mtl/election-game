@@ -35,7 +35,8 @@ def letter(game, n_given):
     if any(h["type"] == "letter" for h in game.hints):
         if any(h["type"] == "length" for h in game.hints):
             return None
-        return {"type": "length", "text": "The word has", "word": f"{len(game.secret)} LETTERS"}
+        return {"type": "length", "text": "The word has", "word": f"{len(game.secret)} LETTERS",
+                "n": len(game.secret)}
     return {"type": "letter", "text": "The word starts with", "word": game.secret[0].upper()}
 
 
@@ -49,7 +50,7 @@ def distance(game, n_given):
     for n in (10, 50, 100, 500, 1000, 5000):
         if pos <= n:
             return {"type": "distance", "text": f"The secret word is in the TOP {n} closest words to",
-                    "word": best["word"].upper()}
+                    "word": best["word"].upper(), "n": n}
     return None
 
 

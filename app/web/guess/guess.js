@@ -1,10 +1,10 @@
 // Guess the Word overlay. All user text goes through textContent (no HTML injection).
 (() => {
   const $ = id => document.getElementById(id);
-  const A = AudioKit;
+  const A = AudioKit, t = I18N.t;
   const fmt = n => Number(n).toLocaleString('en-US');
   const clean = n => (n || '').replace(/[^\p{L}\p{N} ._'-]/gu, '').trim() || 'Someone';
-  const tKey = t => (t || '').toLowerCase().replace(/\s/g, '');
+  const tKey = s => (s || '').toLowerCase().replace(/\s/g, '');
   let S = null;                       // last state
   let vocab = 30000;
 
@@ -98,7 +98,7 @@
   function fx(kind, arg) {
     if (!A.ready) return;
     if (kind === 'guess') {               // don't machine-gun blips
-      const t = performance.now(); if (t - lastBlip < 90) return; lastBlip = t;
+      const now = performance.now(); if (now - lastBlip < 90) return; lastBlip = now;
     }
     FX[kind](arg);
   }
@@ -118,17 +118,17 @@
     if (!showing) nextToast();
   }
   function nextToast() {
-    const t = queue.shift();
-    if (!t) { showing = false; return; }
+    const item = queue.shift();
+    if (!item) { showing = false; return; }
     showing = true;
-    const c = el('div', 'tcard' + (t.huge ? ' huge' : ''));
-    c.style.setProperty('--c', t.color);
-    c.style.setProperty('--hold', t.hold + 's');
-    c.append(el('div', 'h', t.head));
-    if (t.sub) c.append(el('div', 's', t.sub));
+    const c = el('div', 'tcard' + (item.huge ? ' huge' : ''));
+    c.style.setProperty('--c', item.color);
+    c.style.setProperty('--hold', item.hold + 's');
+    c.append(el('div', 'h', item.head));
+    if (item.sub) c.append(el('div', 's', item.sub));
     $('toast').replaceChildren(c);
     c.querySelectorAll('.h, .s').forEach(n => fitText(n, n.textContent));
-    setTimeout(() => { $('toast').replaceChildren(); nextToast(); }, (t.hold + 0.4) * 1000);
+    setTimeout(() => { $('toast').replaceChildren(); nextToast(); }, (item.hold + 0.4) * 1000);
   }
   function mini(text, cls) {
     const m = el('div', 'mini ' + (cls || ''), text);
@@ -138,93 +138,105 @@
     setTimeout(() => m.remove(), 2900);
   }
 
+  // hint text in the current language (server sends the type + word/number)
+  function hintText(e) {
+    const kind = e.kind || e.type;
+    if (kind === 'length') return { text: t('g.h.length'), word: I18N.n(e.n || 0, 'letter') };
+    if (kind === 'distance') return { text: t('g.h.distance', { n: e.n }), word: e.word };
+    return { text: t('g.h.' + kind), word: e.word };
+  }
+
   // ------------------------------------------------------------ events from the server
   function onEvent(e) {
-    const name = clean(e.name);
+    const name = clean(e.name), NAME = name.toUpperCase();
     switch (e.type) {
       case 'guess': fx('guess', tKey(e.temp)); addFresh(e); break;
       case 'new_leader':
         fx('leader');
-        toast(e.comeback ? '↩ COMEBACK!' : '🔥 NEW LEADER!', name.toUpperCase() + ' — #' + fmt(e.rank), 'var(--magenta)', { important: true });
-        voice((e.comeback ? 'Comeback! ' : 'New leader! ') + name + ', rank ' + e.rank + '!');
+        toast(t(e.comeback ? 'g.t.comeback' : 'g.t.leader'), NAME + ' — #' + fmt(e.rank), 'var(--magenta)', { important: true });
+        voice(t(e.comeback ? 'g.v.comeback' : 'g.v.leader', { name, rank: e.rank }));
         break;
       case 'jump':
         fx('jump', e.kind);
         if (e.kind === 'massive') {
-          toast('🚀 MASSIVE JUMP!', name + '  #' + fmt(e.frm) + ' → #' + fmt(e.to), 'var(--lime)', { huge: true, important: true, hold: 2 });
-          voice('Massive jump by ' + name + '!');
-        } else toast('BIG IMPROVEMENT!', name + '  #' + fmt(e.frm) + ' → #' + fmt(e.to), 'var(--lime)');
+          toast(t('g.t.massive'), name + '  #' + fmt(e.frm) + ' → #' + fmt(e.to), 'var(--lime)', { huge: true, important: true, hold: 2 });
+          voice(t('g.v.massive', { name }));
+        } else toast(t('g.t.big'), name + '  #' + fmt(e.frm) + ' → #' + fmt(e.to), 'var(--lime)');
         break;
       case 'close':
         fx('close', e.level);
         if (e.level === 'so_close') {
-          toast('😱 SO CLOSE!', name + ' is ONE STEP AWAY — #2', 'var(--pink)', { huge: true, important: true, hold: 2.2 });
-          voice('So close! ' + name + ' is one step away!', 'high');
+          toast(t('g.t.soClose'), t('g.t.soCloseSub', { name }), 'var(--pink)', { huge: true, important: true, hold: 2.2 });
+          voice(t('g.v.soClose', { name }), 'high');
         } else if (e.level === 'top3') {
-          toast('⚡ TOP 3!', name + ' — #' + e.rank, 'var(--orange)', { important: true });
-          voice(name + ' is in the top three!');
+          toast(t('g.t.top3'), name + ' — #' + e.rank, 'var(--orange)', { important: true });
+          voice(t('g.v.top3', { name }));
         } else if (e.level === 'top10') {
-          toast('🔥 TOP 10!', name + ' — #' + e.rank, 'var(--orange)');
+          toast(t('g.t.top10'), name + ' — #' + e.rank, 'var(--orange)');
         } else {
-          mini('🌡 ' + name + ' reached ' + (e.level === 'top50' ? 'TOP 50' : 'TOP 100') + ' — #' + e.rank, 'small');
+          mini(t('g.t.reached', { name, n: e.level === 'top50' ? 50 : 100, rank: e.rank }), 'small');
         }
         break;
       case 'streak':
         fx('streak', e.n);
-        toast('🔥 ' + e.n + ' WIN STREAK', name, 'var(--orange)', { huge: e.n >= 3, important: true, hold: e.n >= 5 ? 2.8 : 2 });
-        voice(name + ' is on a ' + e.n + ' win streak!', 'high');
+        toast(t('g.t.streak', { n: e.n }), name, 'var(--orange)', { huge: e.n >= 3, important: true, hold: e.n >= 5 ? 2.8 : 2 });
+        voice(t('g.v.streak', { name, n: e.n }), 'high');
         break;
       case 'gift':
         fx('gift');
-        mini('🎁 ' + name + ' sent ' + clean(e.gift) + (e.count > 1 ? ' ×' + e.count : ''), 'gift');
+        mini(t('g.t.gift', { name, gift: clean(e.gift) }) + (e.count > 1 ? ' ×' + e.count : ''), 'gift');
         break;
       case 'follow':
         fx('follow');
-        mini('💜 ' + name + ' followed — thank you!', 'follow');
+        mini(t('g.t.followed', { name }), 'follow');
         break;
       case 'follow_needed':
-        if (e.dq) mini('❤ ' + name + ' — FOLLOW to play and win!', 'follow');
+        if (e.dq) mini(t('g.t.followToPlay', { name }), 'follow');
         else {
-          mini('❤ ' + name + ' — FOLLOW within ' + e.seconds + 's to keep your spot!', 'follow');
-          voice(name + ', follow to keep your spot!');
+          mini(t('g.t.followNeeded', { name, n: e.seconds }), 'follow');
+          voice(t('g.v.followNeeded', { name }));
         }
         break;
       case 'found_pending':
         fx('close', 'so_close');
-        toast('😱 ' + name.toUpperCase() + ' FOUND IT!', 'FOLLOW in ' + e.seconds + 's to WIN!', 'var(--magenta)', { huge: true, important: true, hold: 2.6 });
-        voice(name + ' found the word! Follow now to win!', 'high');
+        toast(t('g.t.foundPending', { name: NAME }), t('g.t.foundPendingSub', { n: e.seconds }), 'var(--magenta)', { huge: true, important: true, hold: 2.6 });
+        voice(t('g.v.foundPending', { name }), 'high');
         break;
       case 'follow_ok':
         fx('follow');
-        toast('💜 THANKS ' + name.toUpperCase() + '!', "You're in the game!", 'var(--violet)', { important: true });
-        voice('Thank you ' + name + '! You are in the game!');
+        toast(t('g.t.thanks', { name: NAME }), t('g.t.thanksSub'), 'var(--violet)', { important: true });
+        voice(t('g.v.thanks', { name }));
         break;
       case 'dq':
         fx('timeout');
-        toast('😢 SORRY ' + name.toUpperCase(), 'You must FOLLOW to win. Follow and come back!', 'var(--pink)', { important: true, hold: 2.4 });
-        voice('Sorry ' + name + '! You need to follow to win!', 'high');
+        toast(t('g.t.sorry', { name: NAME }), t('g.t.sorrySub'), 'var(--pink)', { important: true, hold: 2.4 });
+        voice(t('g.v.sorry', { name }), 'high');
         break;
       case 'unknown':                     // shown in the list (grey) so the player sees it was read
         addFresh(Object.assign({}, e, { unknown: true }), 2500);
         break;
-      case 'hint':
+      case 'hint': {
         fx('hint');
-        toast('💡 HINT', (e.text + ' ' + e.word).trim(), 'var(--yellow)', { important: true, hold: 2.4 });
-        voice('Hint! ' + e.text + ' ' + e.word.toLowerCase(), 'high');
+        const h = hintText(e);
+        toast(t('g.hint'), (h.text + ' ' + h.word).trim(), 'var(--yellow)', { important: true, hold: 2.4 });
+        voice(t('g.v.hint', { text: h.text, word: h.word.toLowerCase() }), 'high');
         break;
+      }
       case 'timeout':
         fx('timeout');
-        toast(e.reason === 'skip' ? '⏭ ROUND SKIPPED' : "⏰ TIME'S UP!", '', 'var(--orange)', { huge: true, important: true, hold: 1.4 });
-        voice(e.reason === 'skip' ? 'Round skipped!' : "Time's up!", 'urgent');
+        toast(t(e.reason === 'skip' ? 'g.t.skipped' : 'g.t.timeUp'), '', 'var(--orange)', { huge: true, important: true, hold: 1.4 });
+        voice(t(e.reason === 'skip' ? 'g.v.skipped' : 'g.v.timeUp'), 'urgent');
         break;
-      case 'winner':
+      case 'winner': {
         fx('winner');
-        if (e.reason === 'exact') voice('We have a winner! ' + name + ' found the word: ' + e.word.toLowerCase() + '!', 'urgent');
-        else if (e.name) voice('The winner is ' + name + '! The word was ' + e.word.toLowerCase() + '.', 'high');
-        else voice('Nobody found it! The word was ' + e.word.toLowerCase() + '.', 'high');
+        const word = e.word.toLowerCase();
+        if (e.reason === 'exact') voice(t('g.v.winner', { name, word }), 'urgent');
+        else if (e.name) voice(t('g.v.closest', { name, word }), 'high');
+        else voice(t('g.v.nobody', { word }), 'high');
         break;
+      }
       case 'round_start':
-        voice((e.roundType === 'speed' ? 'Speed round! ' : 'Round ' + e.round + '. ') + 'Go!', 'urgent');
+        voice(e.roundType === 'speed' ? t('g.v.speed') : t('g.v.round', { n: e.round }), 'urgent');
         break;
     }
   }
@@ -235,7 +247,7 @@
   function renderHunters(list) {
     const box = $('hunterList');
     box.replaceChildren();
-    if (!list.length) { box.append(el('li', 'hrow empty', 'No hunters yet — be the first!')); return; }
+    if (!list.length) { box.append(el('li', 'hrow empty', t('g.noHunters'))); return; }
     const medals = ['🥇', '🥈', '🥉', '4', '5'];
     list.forEach((h, i) => {
       const li = el('li', 'hrow' + (h.leader ? ' leader' : ''));
@@ -258,6 +270,7 @@
 
   function guessRow(g, cls) {
     const row = el('div', 'grow ' + (cls || ''));
+    row.dataset.badge = t(g.unknown ? 'g.badgeUnknown' : 'g.badgeNew');
     // [rank] [word / proximity bar] [big avatar + name] — the player is the star of the row
     const bar = el('div', 'bar t-' + g.tempKey); const fill = el('i');
     fill.style.width = Math.round(closeness(g.rank) * 100) + '%';
@@ -265,11 +278,11 @@
     const who = el('div', 'who');
     const nm = el('div', 'nm');
     nm.append(el('span', 'n', g.name));
-    if (g.count > 1) nm.append(el('span', 'cnt', '+' + (g.count - 1) + ' more'));
+    if (g.count > 1) nm.append(el('span', 'cnt', t('g.more', { n: g.count - 1 })));
     who.append(avatar(g.name, g.avatar), nm);
     if (g.unknown) {
       row.classList.add('unknown');
-      row.append(el('div', 'rk', '❓'), el('div', 'wd', g.word), who, el('div', 'bar-note', 'NOT IN DICTIONARY'));
+      row.append(el('div', 'rk', '❓'), el('div', 'wd', g.word), who, el('div', 'bar-note', t('g.notInDict')));
       return row;
     }
     row.append(el('div', 'rk t-' + g.tempKey, '#' + fmt(g.rank)), el('div', 'wd', g.word), who, bar);
@@ -294,7 +307,7 @@
     fresh = fresh.filter(f => now - f.at < f.ttl);
     const box = $('guessList');
     box.replaceChildren();
-    if (!best.length && !fresh.length) { box.append(el('div', 'empty-hint', 'Type a word in chat to start hunting!')); return; }
+    if (!best.length && !fresh.length) { box.append(el('div', 'empty-hint', t('g.noGuesses'))); return; }
     const mark = g => {
       const before = prevWords.get(g.word);
       return before === undefined ? 'new' : g.count > before ? 'more' : '';
@@ -312,11 +325,11 @@
   let taglineI = 0, taglineT = 0;
   function tagline(s) {
     const lines = [];
-    if (s.leader) lines.push('Can you beat ' + s.leader.name + '? Best is #' + fmt(s.leader.rank));
-    if (s.stats.top100 >= 2) lines.push(s.stats.top100 + ' players are in the TOP 100!');
-    if (s.streak) lines.push(s.streak.name + ' is on a ' + s.streak.n + ' WIN STREAK!');
-    if (s.stats.guesses) lines.push(fmt(s.stats.guesses) + ' guesses so far');
-    if (!lines.length) lines.push('Smaller rank = closer to the secret word');
+    if (s.leader) lines.push(t('g.tag.beat', { name: s.leader.name, rank: fmt(s.leader.rank) }));
+    if (s.stats.top100 >= 2) lines.push(t('g.tag.top100', { players: I18N.n(s.stats.top100, 'player') }));
+    if (s.streak) lines.push(t('g.tag.streak', { name: s.streak.name, n: s.streak.n }));
+    if (s.stats.guesses) lines.push(t('g.tag.count', { guesses: I18N.n(s.stats.guesses, 'guess') }));
+    if (!lines.length) lines.push(t('g.tag.default'));
     const now = Date.now();
     if (now - taglineT > 5000) { taglineI++; taglineT = now; $('tagline').classList.remove('swap'); void $('tagline').offsetWidth; $('tagline').classList.add('swap'); }
     $('tagline').textContent = lines[taglineI % lines.length];
@@ -328,20 +341,20 @@
     $('wAvatar').replaceChildren();
     $('wChips').replaceChildren();
     if (w && w.reason === 'exact') {
-      title.textContent = '🎉 WE HAVE A WINNER!'; title.className = 'wtitle';
+      title.textContent = t('g.w.title'); title.className = 'wtitle';
     } else {
-      title.textContent = w ? "⏰ TIME'S UP!" : '😵 NOBODY FOUND IT'; title.className = 'wtitle timeout';
+      title.textContent = t(w ? 'g.w.timeout' : 'g.w.nobody'); title.className = 'wtitle timeout';
     }
     if (w) {
       $('wAvatar').append(avatar(w.name, w.avatar));
       fitText($('wName'), w.name);
-      $('wSub').textContent = w.reason === 'exact' ? 'found the word:' : 'was the closest! The word:';
+      $('wSub').textContent = t(w.reason === 'exact' ? 'g.w.found' : 'g.w.closest');
       const chips = ['⏱ ' + Math.floor(w.seconds / 60) + ':' + String(w.seconds % 60).padStart(2, '0'),
-                     '🎯 ' + w.guesses + ' guesses', '🏅 best #' + fmt(w.best)];
+                     '🎯 ' + I18N.n(w.guesses, 'guess'), t('g.w.best', { n: fmt(w.best) })];
       chips.forEach(c => $('wChips').append(el('span', 'chip', c)));
-      if (w.streak >= 2) $('wChips').append(el('span', 'chip streak', '🔥 ' + w.streak + ' WIN STREAK'));
+      if (w.streak >= 2) $('wChips').append(el('span', 'chip streak', t('g.w.streak', { n: w.streak })));
     } else {
-      $('wName').textContent = ''; $('wSub').textContent = 'The word was:';
+      $('wName').textContent = ''; $('wSub').textContent = t('g.w.was');
     }
     fitText($('wWord'), s.secretWord || '');
   }
@@ -375,11 +388,10 @@
     list.slice(0, 5).forEach((p, i) => {
       const l = el('div', 'line');
       l.append(el('span', '', ['🥇', '🥈', '🥉', '4.', '5.'][i] + ' ' + p.name),
-               el('span', '', p.wins ? p.wins + (p.wins === 1 ? ' win' : ' wins')
-                                     : p.podiums + (p.podiums === 1 ? ' podium' : ' podiums')));
+               el('span', '', p.wins ? I18N.n(p.wins, 'win') : I18N.n(p.podiums, 'podium')));
       box.append(l);
     });
-    if (!list.length) box.append(el('div', 'line', 'No winners yet — be the first!'));
+    if (!list.length) box.append(el('div', 'line', t('g.r.noWinners')));
   }
 
   // promo lines for the break; one of them is highlighted in turn
@@ -391,8 +403,8 @@
     if (key === promoKey) return;
     promoKey = key;
     const box = $('promo'); box.replaceChildren();
-    lines.forEach((t, i) => {
-      const p = el('div', 'p', PROMO_ICONS[i % PROMO_ICONS.length] + ' ' + t.toUpperCase());
+    lines.forEach((line, i) => {
+      const p = el('div', 'p', PROMO_ICONS[i % PROMO_ICONS.length] + ' ' + line.toUpperCase());
       p.style.setProperty('--c', PROMO_COLORS[i % PROMO_COLORS.length]);
       box.append(p);
     });
@@ -411,10 +423,10 @@
     S = s;
     vocab = s.vocabSize || vocab;
     $('error').hidden = !s.error;
-    if (s.error) { $('errText').textContent = '⚠ Guess the Word is unavailable: ' + s.error; return; }
+    if (s.error) { $('errText').textContent = t('g.err') + s.error; return; }
 
     const chip = $('roundChip');
-    chip.textContent = 'ROUND ' + s.roundId + (s.roundType === 'speed' ? ' · SPEED' : '');
+    chip.textContent = t('g.round', { n: s.roundId }) + (s.roundType === 'speed' ? t('g.speed') : '');
     chip.classList.toggle('speed', s.roundType === 'speed');
     $('playersChip').textContent = '👥 ' + s.stats.players;
     fitText($('secretWord'), s.secretWord || '? ? ?');
@@ -432,7 +444,7 @@
     const h = s.hints[s.hints.length - 1];
     $('hintCard').hidden = !h;
     if (h) {
-      $('hintText').textContent = h.text; $('hintWord').textContent = h.word;
+      const ht = hintText(h); $('hintText').textContent = ht.text; $('hintWord').textContent = ht.word;
       if (s.hints.length !== prevHintCount) { $('hintCard').classList.remove('new'); void $('hintCard').offsetWidth; $('hintCard').classList.add('new'); }
     }
     prevHintCount = s.hints.length;
@@ -458,25 +470,25 @@
     if (!S || S.error) return;
     const now = Live.now();
     document.querySelectorAll('#hunterList .fw').forEach(n => {
-      n.textContent = '❤ FOLLOW · ' + Math.max(0, Math.ceil(Number(n.dataset.until) - now)) + 's';
+      n.textContent = t('g.follow', { n: Math.max(0, Math.ceil(Number(n.dataset.until) - now)) });
     });
-    const t = $('timer');
+    const timerEl = $('timer');
     if (S.phase === 'playing') {
       const left = Math.max(0, Math.ceil(S.endsAt - now));
-      t.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
-      t.classList.toggle('low', left <= 10);
+      timerEl.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+      timerEl.classList.toggle('low', left <= 10);
       if (left <= 10 && left > 0) {
         if (lastBig !== String(left)) fx('tick', left);
         bigNum(String(left), 'final');
       } else bigNum('');
     } else if (S.phase === 'countdown') {
       const left = Math.ceil(S.phaseUntil - now);
-      t.textContent = '0:00'; t.classList.remove('low');
+      timerEl.textContent = '0:00'; timerEl.classList.remove('low');
       const label = left > 1 ? String(left - 1) : 'GO!';
       if (lastBig !== label) fx('count', label === 'GO!');
       bigNum(label, label === 'GO!' ? 'go' : 'cd');
     } else {
-      t.classList.remove('low');
+      timerEl.classList.remove('low');
       if (S.phase === 'reveal') {
         const left = Math.max(0, Math.ceil(S.phaseUntil - now));
         const elapsed = (S.breakSec || 0) - left;
@@ -484,7 +496,7 @@
         $('rResults').hidden = lobby;
         $('lobby').hidden = !lobby;
         $('rNext').hidden = lobby;
-        $('rNext').textContent = 'NEXT ROUND IN ' + fmtClock(left);
+        $('rNext').textContent = t('g.r.next', { t: fmtClock(left) });
         $('lTime').textContent = fmtClock(left);
         $('lTime').classList.toggle('soon', left <= 10);
         if (lobby) highlightPromo(Math.floor(elapsed / 4));
@@ -492,12 +504,11 @@
         if (lobby && !v.start && left > 35) {
           v.start = true;
           const mins = Math.round(left / 60);
-          voice('Next round in ' + (mins >= 1 ? mins + (mins === 1 ? ' minute' : ' minutes') : left + ' seconds') +
-                '! Follow and subscribe to join the game!', 'high');
+          voice(t('g.v.break', { t: mins >= 1 ? I18N.n(mins, 'minute') : t('g.seconds', { n: left }) }), 'high');
         }
         if (!v.soon && left <= 30 && left > 25) {
           v.soon = true;
-          voice('Next round in 30 seconds! Get ready to type your words!', 'high');
+          voice(t('g.v.soon'), 'high');
         }
       }
       if (lastBig !== 'GO!' || S.phase !== 'playing') bigNum('');
@@ -513,7 +524,7 @@
   }
   $('rules').onclick = () => { $('rules').hidden = true; };
   A.mount({ rules: () => ($('rules').hidden ? showRules(12000) : ($('rules').hidden = true)),
-            hello: 'Sound on. Let\'s find the secret word!' });
+            hello: 'g.v.hello' });
   showRules(7000);
   Live.start({ game: 'guess', onState: render, onEvent });
 })();

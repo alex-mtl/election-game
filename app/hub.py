@@ -19,6 +19,9 @@ class Hub:
         s = store.load(self.SESSION) or {}
         self.room_id = s.get("room_id") or (store.load("state.json") or {}).get("room_id")
         self.active = s.get("active") if s.get("active") in self.games else config.DEFAULT_GAME
+        self.lang = s.get("lang") or config.LANGUAGE
+        for g in self.games.values():
+            g.set_lang(self.lang)
         self.clients = set()                      # websockets
         self.sent_seq = {name: g.seq for name, g in self.games.items()}
         self.tiktok_status = "offline"
@@ -42,8 +45,18 @@ class Hub:
         self.save_session()
         print(f"[hub] active game -> {name}")
 
+    def set_lang(self, lang):
+        if lang not in config.LANGUAGES or lang == self.lang:
+            return
+        self.lang = lang
+        for g in self.games.values():
+            g.set_lang(lang)
+            g.dirty = True
+        self.save_session()
+        print(f"[hub] language -> {lang}")
+
     def save_session(self):
-        self.store.save(self.SESSION, {"room_id": self.room_id, "active": self.active})
+        self.store.save(self.SESSION, {"room_id": self.room_id, "active": self.active, "lang": self.lang})
 
     # ---- TikTok -> active game ----
     def new_live(self, room_id):
@@ -71,6 +84,7 @@ class Hub:
         g = self.games[name]
         return {"active": self.active, "game": name, "seq": g.seq, "now": time.time(),
                 "tiktok": self.tiktok_status, "version": getattr(self, "web_version", ""),
+                "lang": self.lang,
                 "events": g.events_since(since) if since is not None else [],
                 "state": g.snapshot()}
 
