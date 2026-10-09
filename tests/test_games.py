@@ -132,6 +132,23 @@ class GuessTest(unittest.TestCase):
         self.assertNotEqual(h["word"].lower(), g.secret)
 
 
+class GiftHintTest(unittest.TestCase):
+    def test_gift_hint_counts_as_gifter_guess(self):
+        config.GIFT_HINT_NAMES = ["rose"]
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        mike = Viewer("mike", "Mike", "", 1)
+        g.on_gift(mike, "Rose", 1)
+        h = g.hints[-1]
+        self.assertEqual(h["type"], "semantic")
+        p = g.players["mike"]
+        self.assertIn(h["word"].lower(), p.words)
+        self.assertEqual(p.best, int(g.rank[g.sem.index[h["word"].lower()]]))
+        self.assertEqual(g.snapshot()["topHunters"][0]["name"], "Mike")
+        g.on_gift(Viewer("sara", "Sara", "", 1), "Rose", 1)    # no cooldown between gifters
+        self.assertEqual(len(g.hints), 2)
+
+
 class FollowTest(GuessTest):
     def nf(self, name):
         return Viewer(name.lower(), name, "", 0)            # not following

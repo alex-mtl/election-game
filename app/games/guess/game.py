@@ -296,13 +296,18 @@ class GuessGame(BaseGame):
         self.past_leaders.add(new.id)
 
     # ------------------------------------------------------------------ hints / gifts
-    def give_hint(self, source, now=None):
+    def give_hint(self, source, now=None, viewer=None):
+        """Auto hints rotate types and respect a cooldown. A gift hint (viewer given) is always
+        a close word, has no cooldown, and that word counts as the gifter's own guess."""
         now = now or time.time()
         if self.phase != PLAYING or not self.secret:
             return None
-        if now - self.last_hint_t < config.HINT_COOLDOWN_SEC:
+        if viewer is None and now - self.last_hint_t < config.HINT_COOLDOWN_SEC:
             return None
-        h = hints.make_hint(self, config.HINT_TYPES)
+        h = None
+        if viewer is not None:
+            h = hints.semantic(self, sum(1 for x in self.hints if x["type"] == "semantic"))
+        h = h or hints.make_hint(self, config.HINT_TYPES)
         if not h:
             return None
         h["by"] = source
@@ -310,6 +315,13 @@ class GuessGame(BaseGame):
         self.last_hint_t = now
         self.emit("hint", kind=h["type"], text=h["text"], word=h["word"], by=source)
         print(f"[guess] hint ({h['type']}) by {source}")
+        word = h["word"].lower()
+        if viewer is not None and h["type"] == "semantic" and word in self.sem.index:
+            p = self.players.get(viewer.id)
+            if p is None:
+                p = self.players[viewer.id] = RoundPlayer(viewer.id, viewer.name, viewer.avatar)
+            if word not in p.words:
+                self._accept(p, word, now)               # the hint word is their guess
         return h
 
     def on_gift(self, viewer: Viewer, gift: str, count: int):
@@ -319,7 +331,7 @@ class GuessGame(BaseGame):
         if g in config.GIFT_NEW_ROUND_NAMES and self.phase == PLAYING:
             self._finish(time.time(), "skip")
         elif g in config.GIFT_HINT_NAMES:
-            self.give_hint(viewer.name)
+            self.give_hint(viewer.name, viewer=viewer)
 
     def on_follow(self, viewer: Viewer):
         self.stats.follows += 1
@@ -447,7 +459,7 @@ class GuessGame(BaseGame):
             self.on_gift(v, params.get("gift") or "Rose", 1)
         elif action == "hint":
             self.last_hint_t = 0
-            return {"hint": self.give_hint(name, now)}
+            return {"hint": self.give_hint(name, now, viewer=v)}
         elif action == "trigger_new_leader":
             self.emit("new_leader", name=name, avatar="", rank=17, prev="Mike", comeback=False)
         elif action == "trigger_massive_jump":
