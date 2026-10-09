@@ -109,11 +109,37 @@ class TikTokConnector:
         def join(event):
             hub.join(viewer_of(event.user))
 
+        streaks = {}                              # (user, gift) -> pending combo
+
+        def deliver(key):
+            st = streaks.pop(key, None)
+            if st:
+                print(f"[gift] {st['viewer'].name}: {st['name']} x{st['count']}")
+                hub.gift(st["viewer"], st["name"], st["count"])
+
         def gift(event):
-            if event.streaking:                   # wait for the end of a combo
-                return
+            v = viewer_of(event.user)
             name = getattr(event.gift, "name", "") or "Gift"
-            hub.gift(viewer_of(event.user), name, int(getattr(event, "repeat_count", 1) or 1))
+            count = int(getattr(event, "repeat_count", 1) or 1)
+            streaking = bool(event.streaking)
+            if config.LOG_CHAT:
+                print(f"[gift] event {v.name}: {name} x{count} streaking={streaking}")
+            key = (v.id, name)
+            if not streaking:                     # single gift or end of a combo
+                old = streaks.pop(key, None)
+                if old and old.get("timer"):
+                    old["timer"].cancel()
+                streaks[key] = {"viewer": v, "name": name, "count": count}
+                deliver(key)
+                return
+            # combo in progress: wait for its end, but don't lose it if the end never arrives
+            st = streaks.get(key)
+            if st is None:
+                st = streaks[key] = {"viewer": v, "name": name, "count": count}
+            st["count"] = max(st["count"], count)
+            if st.get("timer"):
+                st["timer"].cancel()
+            st["timer"] = asyncio.get_running_loop().call_later(5, deliver, key)
 
         def follow(event):
             hub.follow(viewer_of(event.user))
