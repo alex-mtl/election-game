@@ -80,7 +80,7 @@ class TikTokConnector:
     async def _run_once(self):
         from TikTokLive import TikTokLiveClient
         from TikTokLive.events import (CommentEvent, ConnectEvent, FollowEvent, GiftEvent,
-                                       JoinEvent)
+                                       JoinEvent, LikeEvent)
 
         client = TikTokLiveClient(unique_id=self.username)
         hub = self.hub
@@ -144,10 +144,14 @@ class TikTokConnector:
         def follow(event):
             hub.follow(viewer_of(event.user))
 
+        def like(event):
+            hub.like(viewer_of(event.user), max(1, int(getattr(event, "count", 1) or 1)))
+
         client.on(CommentEvent)(safe(comment))
         client.on(JoinEvent)(safe(join))
         client.on(GiftEvent)(safe(gift))
         client.on(FollowEvent)(safe(follow))
+        client.on(LikeEvent)(safe(like))
 
         # TikTok often blocks the profile-HTML lookup the library uses by default
         # ("you might be blocked") and then reports the user offline; the API lookup works.

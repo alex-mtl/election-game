@@ -53,6 +53,9 @@ class BaseGame:
     def on_follow(self, viewer: Viewer):
         pass
 
+    def on_like(self, viewer: Viewer, count: int):
+        pass
+
     def set_lang(self, lang):
         """Interface/word language changed in the menu."""
 

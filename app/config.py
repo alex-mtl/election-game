@@ -37,6 +37,9 @@ TAP_COOLDOWN_SEC = _f("TAP_COOLDOWN_SEC", 1.0)
 TEAM_COOLDOWN_SEC = _f("TEAM_COOLDOWN_SEC", 5)
 WIN_PAUSE_SEC = _f("WIN_PAUSE_SEC", 15)
 
+# ---- streamer overlay ----
+LIKES_PER_BALLOON = _i("LIKES_PER_BALLOON", 100)        # likes from one viewer -> their balloon takes off
+
 # ---- guess the word ----
 ROUND_DURATION = _i("ROUND_DURATION", 210)
 SPEED_ROUND_DURATION = _i("SPEED_ROUND_DURATION", 75)

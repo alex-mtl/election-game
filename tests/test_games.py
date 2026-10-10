@@ -214,6 +214,24 @@ class FollowTest(GuessTest):
         self.assertFalse(any(p.pending_until for p in g.players.values()))
 
 
+class StreamerTest(unittest.TestCase):
+    def test_likes_inflate_and_launch(self):
+        from app.games.streamer.game import StreamerOverlay
+        config.LIKES_PER_BALLOON = 100
+        s = StreamerOverlay(JsonStore(tempfile.mkdtemp()))
+        mao = Viewer("mao", "Mao", "")
+        s.on_like(mao, 60)
+        self.assertEqual(s.snapshot()["inflating"][0]["fill"], 0.6)
+        self.assertFalse([e for e in s.events if e["type"] == "balloon"])
+        s.on_like(mao, 45)                                   # crosses 100 -> lift off, 5 left
+        launches = [e for e in s.events if e["type"] == "balloon"]
+        self.assertEqual(len(launches), 1)
+        self.assertEqual(launches[0]["id"], "mao")
+        self.assertEqual(s.snapshot()["inflating"][0]["progress"], 5)
+        s.on_like(mao, 250)                                  # big batch -> two more balloons
+        self.assertEqual(len([e for e in s.events if e["type"] == "balloon"]), 3)
+
+
 class BattleTest(unittest.TestCase):
     def test_cooldowns_and_join(self):
         b = BattleGame(JsonStore(tempfile.mkdtemp()))

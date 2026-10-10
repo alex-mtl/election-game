@@ -79,6 +79,9 @@ class Hub:
     def follow(self, v: Viewer):
         self.game.on_follow(v)
 
+    def like(self, v: Viewer, count):
+        self.game.on_like(v, count)
+
     # ---- state for overlays ----
     def message(self, name, since=None):
         g = self.games[name]
