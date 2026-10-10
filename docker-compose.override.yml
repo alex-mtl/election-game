@@ -1,0 +1,9 @@
+# Local development: the game's code and web pages are read straight from this
+# folder, so edits to app/web/** (HTML/CSS/JS) show up on reload without a
+# rebuild. Python changes (app/**/*.py) still need `docker compose restart game`.
+# Delete this file to run exactly what was baked into the image.
+services:
+  game:
+    volumes:
+      - ./data:/data
+      - ./app:/app/app
