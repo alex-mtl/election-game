@@ -14,8 +14,7 @@
   body.bg-dark  { background: #14121c; }
 
   :root { --bw: 20vw; }                     /* balloon width = 20% of the screen */
-  #ground { position: fixed; left: 0; right: 0; bottom: 5vh; height: 40vh; display: flex; align-items: flex-end;
-            justify-content: center; gap: 2vw; pointer-events: none; }
+  #ground { position: fixed; left: 0; right: 0; bottom: 5vh; height: 40vh; pointer-events: none; }
   #sky { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 
   .balloon { position: relative; width: var(--bw); flex: none; transform-origin: 50% 100%; }
@@ -31,7 +30,9 @@
                   overflow: hidden; text-overflow: ellipsis; }
 
   /* inflating at the bottom: grows with likes, wobbles a little */
-  .balloon.inflating { transition: transform .35s cubic-bezier(.3, 1.6, .5, 1), opacity .6s;
+  /* each viewer's balloon gets its own random spot on the ground (--x is its centre, in vw) */
+  .balloon.inflating { position: absolute; bottom: 0; left: calc(var(--x, 50) * 1vw); margin-left: calc(var(--bw) / -2);
+                       transition: transform .35s cubic-bezier(.3, 1.6, .5, 1), opacity .6s;
                        animation: wobble 2.6s ease-in-out infinite; }
   .balloon.inflating .meter { position: absolute; left: 50%; bottom: -1.6vw; transform: translateX(-50%);
                        font: 900 calc(var(--bw) * .1) 'Segoe UI', sans-serif; color: #fff;
@@ -39,13 +40,17 @@
   .balloon.leaving { opacity: 0; }
   @keyframes wobble { 0%, 100% { rotate: -2deg; } 50% { rotate: 2deg; } }
 
-  /* lift off: rise to the top, swaying left/right around its own vertical axis */
-  .flyer { position: absolute; bottom: 0; animation: rise var(--dur) cubic-bezier(.45, .05, .6, 1) forwards; }
+  /* lift off: rise to the top, swaying left/right around its own vertical axis and growing
+     from 20vw (its size on the ground) to 30vw wide (--grow = 30 / 20) as it climbs */
+  .flyer { position: absolute; bottom: 0;
+           animation: rise var(--dur) cubic-bezier(.45, .05, .6, 1) forwards, grow var(--dur) ease-out forwards; }
   .flyer .sway { animation: sway var(--period) ease-in-out infinite alternate; }
   .flyer .meter { display: none; }
   @keyframes rise { 0% { transform: translateY(0) scale(1); }
                     8% { transform: translateY(-3vh) scale(1.08); }
-                    100% { transform: translateY(-130vh) scale(.9); } }
+                    100% { transform: translateY(-130vh) scale(1); } }
+  /* 20vw on the ground -> 30vw wide, reached while it is still on screen (the top of the screen is reached at ~45% of the flight) */
+  @keyframes grow { from { scale: 1; } 42%, to { scale: var(--grow, 1.5); } }
   @keyframes sway { from { transform: translateX(calc(var(--amp) * -1)) rotate(calc(var(--tilt) * -1)); }
                     to { transform: translateX(var(--amp)) rotate(var(--tilt)); } }
 
@@ -121,6 +126,20 @@
     return b;
   }
 
+  // A free spot for a new balloon: random, but never closer than 10% of the screen width to either
+  // edge (its whole 20vw box stays inside 10vw..90vw, so its centre is 20..80). Among a few random
+  // candidates take the one farthest from the balloons already on the ground, so they don't pile up.
+  function pickX() {
+    const taken = [...onGround.values()].map(el => parseFloat(el.dataset.x));
+    let best = 50, bestGap = -1;
+    for (let i = 0; i < 12; i++) {
+      const x = 20 + Math.random() * 60;
+      const gap = taken.length ? Math.min(...taken.map(t => Math.abs(t - x))) : 100;
+      if (gap > bestGap) { best = x; bestGap = gap; }
+    }
+    return best.toFixed(1);
+  }
+
   // ---- inflating balloons at the bottom (from state) ----
   function render(s) {
     per = s.perBalloon || per;
@@ -131,6 +150,8 @@
       if (!b) {
         b = makeBalloon(u);
         b.classList.add('inflating');
+        b.dataset.x = pickX();
+        b.style.setProperty('--x', b.dataset.x);
         b.style.transform = 'scale(.45)';
         ground.appendChild(b);
         onGround.set(u.id, b);
@@ -162,6 +183,7 @@
       b = makeBalloon(e);
       x = W / 2;
     }
+    x = Math.min(Math.max(x, W * 0.2), W * 0.8);   // 30vw wide at the top + sway must stay on screen
     const rnd = (a, z) => a + Math.random() * (z - a);
     const fly = document.createElement('div');
     fly.className = 'flyer';
