@@ -1,6 +1,8 @@
 // Like balloons, shared by all pages (streamer overlay + games).
 //   Balloons.mount({ground, width, sound})
-//     ground: show inflating balloons at the bottom (streamer overlay) or only lift-offs (games)
+//     ground: show inflating balloons at the bottom (true) or only lift-offs (false)
+//     area:   element to put the ground row in (e.g. the 9:16 game column); default the whole window
+//     bottom: where the ground row stands inside it (CSS length, default 5vh)
 //     width:  CSS width of a balloon on the ground (default 20vw); it grows 1.5x while rising
 //     sound:  whoosh + "thank you" voice on lift-off
 //   Balloons.render(msg.balloons)   inflating balloons (from the live state)
@@ -104,7 +106,9 @@ window.Balloons = (() => {
     document.body.appendChild(sky);
     if (opts.ground) {
       ground = document.createElement('div'); ground.className = 'bl-ground';
-      document.body.appendChild(ground);
+      if (opts.area) ground.style.position = 'absolute';
+      if (opts.bottom) ground.style.bottom = opts.bottom;
+      (opts.area || document.body).appendChild(ground);
     }
   }
 

@@ -525,8 +525,10 @@
   A.mount({ rules: () => ($('rules').hidden ? showRules(12000) : ($('rules').hidden = true)),
             hello: 'g.v.hello' });
   showRules(7000);
-  // like balloons fly over the game too (only the lift-off, nothing sits on top of the list)
-  Balloons.mount({ ground: false, width: 'calc(var(--u) * 20)', sound: true });
-  Live.start({ game: 'guess', onState: render, onEvent,
+  // like balloons over the game: each viewer's balloon inflates at the bottom of the game column
+  // (above the hint / call to action) and lifts off at 100 likes
+  Balloons.mount({ ground: true, area: $('stage'), bottom: 'calc(var(--u) * 26)',
+                   width: 'calc(var(--u) * 20)', sound: true });
+  Live.start({ game: 'guess', onState: (s, msg) => { render(s); Balloons.render(msg.balloons); }, onEvent,
                onFeed: e => { if (e.type === 'balloon') Balloons.launch(e); else Greeter.push(e); } });
 })();
