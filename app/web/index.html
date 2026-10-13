@@ -104,6 +104,7 @@ load();
 // ---------- stream alerts (only on the menu page) ----------
 // comment -> phone ring + the comment read aloud; gift -> church bell + the gifter's name
 const A = AudioKit;
+A.ignoreMute();                                    // the games' 🔇 must not silence the alerts
 let alertsOn = false, lastRing = 0;
 const queue = [];
 const clean = n => (n || '').replace(/[^\p{L}\p{N} ._'-]/gu, '').trim() || '?';
@@ -123,12 +124,16 @@ function bell() {                                  // "ding-dong" with bell part
     A.tone(f * 0.5, d, 2.6, 'sine', 0.06);
   });
 }
+function chime() {                                 // soft "ding" for a new viewer
+  A.tone(1047, 0, 0.5, 'sine', 0.12); A.tone(1568, 0.12, 0.6, 'sine', 0.1);
+}
 function addFeedLine(e) {
   const box = document.getElementById('feedList');
   const li = document.createElement('div');
   li.className = 'fl ' + e.type;
   li.textContent = e.type === 'gift'
     ? '🎁 ' + clean(e.name) + ' — ' + clean(e.gift) + (e.count > 1 ? ' ×' + e.count : '')
+    : e.type === 'join' ? t('alert.joinLine', { name: clean(e.name) })
     : '💬 ' + clean(e.name) + ': ' + (e.text || '');
   box.prepend(li);
   while (box.children.length > 6) box.lastChild.remove();
@@ -145,6 +150,14 @@ function next() {                                  // one alert at a time, never
   if (!alertsOn || !A.ready || !queue.length) return;
   const e = queue.shift();
   const now = Date.now();
+  if (e.type === 'join') {                         // merge everyone who joined meanwhile
+    const names = [clean(e.name)];
+    while (queue.length && queue[0].type === 'join') names.push(clean(queue.shift().name));
+    chime();
+    const list = names.length > 3 ? names.slice(0, 3).join(', ') + ' +' + (names.length - 3) : names.join(', ');
+    setTimeout(() => A.say(t('alert.join', { names: list })), 600);
+    return;
+  }
   if (e.type === 'gift') {
     bell();
     setTimeout(() => A.say(t('alert.gift', { name: clean(e.name), gift: clean(e.gift) })), 900);
@@ -160,7 +173,7 @@ function onFeed(e) {
   if (e.type === 'chat' && e.host) return;        // your own comments don't ring
   if (armed) document.getElementById('alerts').classList.add('missed');   // sound still locked: flash
   queue.push(e);
-  while (queue.length > 3) queue.shift();         // busy chat: keep only the latest
+  while (queue.length > 6) queue.shift();         // busy chat: keep only the latest
   next();
 }
 // "armed": alerts were on before a reload, but the browser needs one click to allow sound again

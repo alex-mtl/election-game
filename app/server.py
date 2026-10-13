@@ -114,6 +114,9 @@ def create_app(hub):
         if action == "chat":                         # as if it came from TikTok: feed + active game
             hub.comment(Viewer(name.lower(), name, ""), params.get("text") or params.get("word") or "hello!")
             return {"ok": True}
+        if action == "join":
+            hub.join(Viewer(name.lower(), name, ""))
+            return {"ok": True}
         if action == "gift":
             hub.gift(Viewer(name.lower(), name, ""), params.get("gift") or "Rose", 1)
             return {"ok": True}

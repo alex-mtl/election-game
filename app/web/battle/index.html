@@ -75,6 +75,7 @@
 <script src="/common/i18n.js"></script>
 <script src="/common/live.js"></script>
 <script src="/common/audio.js"></script>
+<script src="/common/greet.js"></script>
 <script>
 const A = AudioKit, t = I18N.t;
 function renderTop(id, list){
@@ -192,7 +193,7 @@ function render(s){
 }
 
 A.mount({hello: 'b.v.hello'});
-Live.start({game: 'battle', onState: render, onEvent: handleEvent});
+Live.start({game: 'battle', onState: render, onEvent: handleEvent, onFeed: e => Greeter.push(e)});
 </script>
 </body>
 </html>

@@ -30,6 +30,7 @@ class Hub:
         self.feed = deque(maxlen=100)
         self.feed_seq = 0
         self.feed_sent = 0
+        self.greeted = set()                      # viewers already welcomed this stream
         self.game.on_activate()
 
     @property
@@ -69,6 +70,7 @@ class Hub:
             self.room_id = room_id
             for g in self.games.values():
                 g.new_session()
+            self.greeted = set()
             self.save_session()
             print(f"[hub] new LIVE (room {room_id}) -> all games reset")
 
@@ -83,6 +85,12 @@ class Hub:
         self.game.on_comment(v, text)
 
     def join(self, v: Viewer):
+        # welcome each viewer once per stream (pages throttle and merge the greetings)
+        if config.GREET_JOINS and v.id not in self.greeted and v.id.lower() != config.TIKTOK_USERNAME.lower():
+            if len(self.greeted) > 20000:
+                self.greeted.clear()
+            self.greeted.add(v.id)
+            self._feed(type="join", name=v.name, avatar=v.avatar)
         self.game.on_join(v)
 
     def gift(self, v: Viewer, gift, count):

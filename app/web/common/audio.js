@@ -133,5 +133,6 @@ window.AudioKit = (() => {
     get speaking() { return !!synth && (synth.speaking || synth.pending); },
     get running() { return !!ctx && ctx.state === 'running'; },      // browser actually allows sound
     resetSpeech() { if (synth) synth.cancel(); },
+    ignoreMute() { muted = false; },          // menu alerts: independent of the games' 🔇 button
   };
 })();

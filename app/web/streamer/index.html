@@ -92,6 +92,7 @@
 <script src="/common/i18n.js"></script>
 <script src="/common/live.js"></script>
 <script src="/common/audio.js"></script>
+<script src="/common/greet.js"></script>
 <script>
 (() => {
   const qs = new URLSearchParams(location.search);
@@ -208,7 +209,8 @@
     }
   }
 
-  Live.start({ game: 'streamer', onState: render, onEvent: e => { if (e.type === 'balloon') launch(e); } });
+  Live.start({ game: 'streamer', onState: render, onEvent: e => { if (e.type === 'balloon') launch(e); },
+               onFeed: e => Greeter.push(e) });
 })();
 </script>
 </body>

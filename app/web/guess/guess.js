@@ -526,5 +526,5 @@
   A.mount({ rules: () => ($('rules').hidden ? showRules(12000) : ($('rules').hidden = true)),
             hello: 'g.v.hello' });
   showRules(7000);
-  Live.start({ game: 'guess', onState: render, onEvent });
+  Live.start({ game: 'guess', onState: render, onEvent, onFeed: e => Greeter.push(e) });
 })();
