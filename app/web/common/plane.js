@@ -32,6 +32,13 @@ window.Plane = (() => {
                color: #fff; font-size: calc(var(--ph) * .2); }
   .pl-banner .nm { color: #1a1033; }
   .pl-banner .hearts { color: #ff2d55; }
+  .pl-deny { position: absolute; left: 50%; top: 9vh; transform: translateX(-50%); max-width: 94vw;
+             padding: .45em 1em; border-radius: 999px; background: rgba(10,0,25,.9); color: #fff;
+             border: 2px solid #ff2d55; font: 800 min(3.8vw, 2.2vh) 'Segoe UI', system-ui, sans-serif;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+             animation: pl-note 4s ease forwards; }
+  @keyframes pl-note { 0% { opacity: 0; transform: translate(-50%, -1em); } 10%, 85% { opacity: 1; transform: translate(-50%, 0); }
+                       100% { opacity: 0; transform: translate(-50%, -.5em); } }
   @keyframes pl-fly { from { transform: translateX(var(--from)); } to { transform: translateX(var(--to)); } }
   @keyframes pl-bob { 0%, 100% { translate: 0 0; rotate: -1deg; } 50% { translate: 0 calc(var(--ph) * .12); rotate: 1.2deg; } }
   @keyframes pl-prop { from { transform: scaleY(1); } 50% { transform: scaleY(.15); } to { transform: scaleY(1); } }`;
@@ -125,7 +132,20 @@ window.Plane = (() => {
     if (!flying && queue.length) { const [e, o] = queue.shift(); launch(e, o); }
   }
 
+  // "!likes!" refused: a short note at the top so the viewer knows why nothing flies
+  function deny(e) {
+    setup();
+    const note = document.createElement('div');
+    note.className = 'pl-deny';
+    note.textContent = '✈ ' + clean(e.name) + ': ' + (e.deny === 'cooldown'
+      ? t('plane.wait', { s: e.wait })
+      : t('plane.need', { need: e.need, have: e.have }));
+    sky.appendChild(note);
+    setTimeout(() => note.remove(), 4200);
+  }
+
   return {
+    deny,
     fly(e, o) {                                // one plane at a time, the rest wait their turn
       setup();
       queue.push([e, o]);

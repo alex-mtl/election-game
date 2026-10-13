@@ -101,7 +101,9 @@ class Hub:
         if LIKES_CMD.match(text or ""):              # "!likes!" is a command, not a game move
             plane, why = self.balloons.likes_command(v)
             print(f"[plane] {v.name}: !likes! -> {why}")
-            if plane:
+            if plane and "deny" in plane:            # tell the viewer why nothing flies
+                self._feed(type="plane_denied", name=v.name, avatar=v.avatar, **plane)
+            elif plane:
                 self._feed(type="plane", **plane)
             return
         self.game.on_comment(v, text)

@@ -270,14 +270,17 @@ class PlaneTest(unittest.TestCase):
         hub.set_active("guess")
         mika = Viewer("mika", "Mikaniri", "")
         planes = lambda: [e for e in hub.feed if e["type"] == "plane"]
+        denied = lambda: [e for e in hub.feed if e["type"] == "plane_denied"]
         hub.like(mika, 15)
         hub.comment(mika, "!лайки!")
         self.assertEqual(planes(), [])                            # not more than 20 likes yet
+        self.assertEqual(denied()[-1]["deny"], "likes")
         hub.like(mika, 10)
         hub.comment(mika, "!likes!")
         self.assertEqual(planes()[-1]["total"], 25)               # 25 likes -> plane
         hub.comment(mika, "!LIKES")
         self.assertEqual(len(planes()), 1)                        # cooldown: one minute
+        self.assertEqual(denied()[-1]["deny"], "cooldown")
         hub.like(mika, 100)
         hub.comment(mika, "!лайки!")
         self.assertEqual(len(planes()), 2)                        # 100 new likes lift the cooldown

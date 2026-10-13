@@ -49,10 +49,11 @@ class LikeBalloons:
         u = self.likes.get(viewer.id)
         total = u["total"] if u else 0
         if total <= config.PLANE_MIN_LIKES:
-            return None, f"only {total} likes"
+            return {"deny": "likes", "have": total, "need": config.PLANE_MIN_LIKES + 1}, f"only {total} likes"
         last_t, likes_then = u.get("plane_t", 0), u.get("plane_likes", -10**9)
         if now - last_t < config.PLANE_COOLDOWN_SEC and total - likes_then < config.LIKES_PER_BALLOON:
-            return None, f"cooldown {int(config.PLANE_COOLDOWN_SEC - (now - last_t))}s"
+            wait = int(config.PLANE_COOLDOWN_SEC - (now - last_t)) + 1
+            return {"deny": "cooldown", "wait": wait}, f"cooldown {wait}s"
         u["plane_t"], u["plane_likes"] = now, total
         u["name"], u["avatar"] = viewer.name, viewer.avatar or u["avatar"]
         return {"id": viewer.id, "name": u["name"], "avatar": u["avatar"], "total": total}, "ok"
