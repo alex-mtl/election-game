@@ -130,7 +130,7 @@
     c.append(el('div', 'h', item.head));
     if (item.sub) c.append(el('div', 's', item.sub));
     $('toast').replaceChildren(c);
-    c.querySelectorAll('.h, .s').forEach(n => fitText(n, n.textContent));
+    c.querySelectorAll('.h').forEach(n => fitText(n, n.textContent));   // the name fits one line; the event text wraps
     setTimeout(() => { $('toast').replaceChildren(); nextToast(); }, (item.hold + 0.4) * 1000);
   }
   function mini(text, cls) {
@@ -156,33 +156,33 @@
       case 'guess': fx('guess', tKey(e.temp)); addFresh(e); break;
       case 'new_leader':
         fx('leader');
-        toast(t(e.comeback ? 'g.t.comeback' : 'g.t.leader'), NAME + ' — #' + fmt(e.rank), 'var(--magenta)', { important: true });
-        voice(t(e.comeback ? 'g.v.comeback' : 'g.v.leader', { name, rank: e.rank }));
+        toast(NAME, t(e.comeback ? 'g.t.comeback' : 'g.t.leader'), 'var(--magenta)', { important: true });
+        voice(t(e.comeback ? 'g.v.comeback' : 'g.v.leader', { name }));
         break;
       case 'jump':
         fx('jump', e.kind);
         if (e.kind === 'massive') {
-          toast(t('g.t.massive'), name + '  #' + fmt(e.frm) + ' → #' + fmt(e.to), 'var(--lime)', { huge: true, important: true, hold: 2 });
+          toast(NAME, t('g.t.massive'), 'var(--lime)', { huge: true, important: true, hold: 2 });
           voice(t('g.v.massive', { name }));
-        } else toast(t('g.t.big'), name + '  #' + fmt(e.frm) + ' → #' + fmt(e.to), 'var(--lime)');
+        } else toast(NAME, t('g.t.big'), 'var(--lime)');
         break;
       case 'close':
         fx('close', e.level);
         if (e.level === 'so_close') {
-          toast(t('g.t.soClose'), t('g.t.soCloseSub', { name }), 'var(--pink)', { huge: true, important: true, hold: 2.2 });
+          toast(NAME, t('g.t.soClose'), 'var(--pink)', { huge: true, important: true, hold: 2.2 });
           voice(t('g.v.soClose', { name }), 'high');
         } else if (e.level === 'top3') {
-          toast(t('g.t.top3'), name + ' — #' + e.rank, 'var(--orange)', { important: true });
+          toast(NAME, t('g.t.top3'), 'var(--orange)', { important: true });
           voice(t('g.v.top3', { name }));
         } else if (e.level === 'top10') {
-          toast(t('g.t.top10'), name + ' — #' + e.rank, 'var(--orange)');
+          toast(NAME, t('g.t.top10'), 'var(--orange)');
         } else {
-          mini(t('g.t.reached', { name, n: e.level === 'top50' ? 50 : 100, rank: e.rank }), 'small');
+          mini(t('g.t.reached', { name, n: e.level === 'top50' ? 50 : 100 }), 'small');
         }
         break;
       case 'streak':
         fx('streak', e.n);
-        toast(t('g.t.streak', streakP(e.n)), name, 'var(--orange)', { huge: e.n >= 3, important: true, hold: e.n >= 5 ? 2.8 : 2 });
+        toast(NAME, t('g.t.streak', streakP(e.n)), 'var(--orange)', { huge: e.n >= 3, important: true, hold: e.n >= 5 ? 2.8 : 2 });
         voice(t('g.v.streak', Object.assign(streakP(e.n), { name })), 'high');
         break;
       case 'gift':
@@ -202,17 +202,17 @@
         break;
       case 'found_pending':
         fx('close', 'so_close');
-        toast(t('g.t.foundPending', { name: NAME }), t('g.t.foundPendingSub', { n: e.seconds }), 'var(--magenta)', { huge: true, important: true, hold: 2.6 });
+        toast(NAME, t('g.t.foundPending') + ' ' + t('g.t.foundPendingSub', { n: e.seconds }), 'var(--magenta)', { huge: true, important: true, hold: 2.6 });
         voice(t('g.v.foundPending', { name }), 'high', 1);
         break;
       case 'follow_ok':
         fx('follow');
-        toast(t('g.t.thanks', { name: NAME }), t('g.t.thanksSub'), 'var(--violet)', { important: true });
+        toast(NAME, t('g.t.thanks') + ' ' + t('g.t.thanksSub'), 'var(--violet)', { important: true });
         voice(t('g.v.thanks', { name }), 'high', 1);
         break;
       case 'dq':
         fx('timeout');
-        toast(t('g.t.sorry', { name: NAME }), t('g.t.sorrySub'), 'var(--pink)', { important: true, hold: 2.4 });
+        toast(NAME, t('g.t.sorry') + ' ' + t('g.t.sorrySub'), 'var(--pink)', { important: true, hold: 2.4 });
         voice(t('g.v.sorry', { name }), 'high', 1);
         break;
       case 'unknown':                     // shown in the list (grey) so the player sees it was read

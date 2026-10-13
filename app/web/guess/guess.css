@@ -282,3 +282,6 @@ body { display: flex; justify-content: center; }
 /* not following yet: magenta countdown next to the name */
 .grow .who .fw { font: 800 calc(var(--u) * 2.6) var(--font-display); color: var(--magenta); white-space: nowrap;
                  text-shadow: 0 0 .4em var(--magenta); animation: pulse 1s infinite; }
+
+/* toasts: the player name is the neon headline, the event is plain text under it */
+.tcard .s { font: 700 calc(var(--u) * 5)/1.2 var(--font-text); color: #fff; margin-top: .3em; white-space: normal; }
