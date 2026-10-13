@@ -72,7 +72,7 @@ window.AudioKit = (() => {
     const u = new SpeechSynthesisUtterance(text);
     if (voice) u.voice = voice;
     u.lang = voice ? voice.lang : (lang === 'ru' ? 'ru-RU' : 'en-US'); u.volume = 1;
-    u.rate = Math.min(10, (o.excited ? 1.2 : 1.05) * rateMul); u.pitch = o.excited ? 1.35 : 1.05;
+    u.rate = o.rate || Math.min(10, (o.excited ? 1.2 : 1.05) * rateMul); u.pitch = o.excited ? 1.35 : 1.05;   // o.rate: exact speed (e.g. 1 for key phrases)
     if (o.onend) u.onend = o.onend;
     u.onerror = ev => { if (window.clientLog) clientLog('speech error: ' + (ev.error || '?')); if (o.onend) o.onend(); };
     synth.speak(u);
@@ -117,7 +117,7 @@ window.AudioKit = (() => {
       const ov = document.createElement('div'); ov.className = 'ctl-unlock';
       const b = document.createElement('button'); b.dataset.i18n = 'unlock'; b.textContent = T('unlock');
       ov.appendChild(b); document.body.appendChild(ov);
-      ov.onclick = () => { enable(); ov.remove(); say(T(o.hello || 'b.v.hello')); };
+      ov.onclick = () => { enable(); ov.remove(); say(T(o.hello || 'b.v.hello'), { rate: o.helloRate }); };
     }
   }
 

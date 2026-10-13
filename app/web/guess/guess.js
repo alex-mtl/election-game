@@ -103,11 +103,7 @@
     FX[kind](arg);
   }
   // voice: important moments only; low-priority lines are skipped while speaking
-  function voice(text, prio) {
-    if (!A.ready) return;
-    if (prio === 'urgent') A.say(text, { urgent: true, excited: true });
-    else if (prio === 'high' || !A.speaking) A.say(text, { excited: true });
-  }
+// key phrases (round start, winner and the word) at normal speed (rate 1), the rest at VOICE_RATE  function voice(text, prio, rate) {    if (!A.ready) return;    if (prio === 'urgent') A.say(text, { urgent: true, excited: true, rate });    else if (prio === 'high' || !A.speaking) A.say(text, { excited: true, rate });  }
 
   // ------------------------------------------------------------ big toasts (queued, 1-3 s)
   const queue = []; let showing = false;
@@ -230,13 +226,13 @@
       case 'winner': {
         fx('winner');
         const word = e.word.toLowerCase();
-        if (e.reason === 'exact') voice(t('g.v.winner', { name, word }), 'urgent');
-        else if (e.name) voice(t('g.v.closest', { name, word }), 'high');
-        else voice(t('g.v.nobody', { word }), 'high');
+        if (e.reason === 'exact') voice(t('g.v.winner', { name, word }), 'urgent', 1);
+        else if (e.name) voice(t('g.v.closest', { name, word }), 'high', 1);
+        else voice(t('g.v.nobody', { word }), 'high', 1);
         break;
       }
       case 'round_start':
-        voice(e.roundType === 'speed' ? t('g.v.speed') : t('g.v.round', { n: e.round }), 'urgent');
+        voice(e.roundType === 'speed' ? t('g.v.speed') : t('g.v.round', { n: e.round }), 'urgent', 1);
         break;
     }
   }
@@ -523,7 +519,7 @@
   }
   $('rules').onclick = () => { $('rules').hidden = true; };
   A.mount({ rules: () => ($('rules').hidden ? showRules(12000) : ($('rules').hidden = true)),
-            hello: 'g.v.hello' });
+            hello: 'g.v.hello', helloRate: 1 });
   showRules(7000);
   // like balloons over the game: each viewer's balloon inflates at the bottom of the game column
   // (above the hint / call to action) and lifts off at 100 likes
