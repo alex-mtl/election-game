@@ -85,6 +85,16 @@ def create_app(hub):
         name = game if game in hub.games else hub.active
         return hub.message(name, since, fsince)
 
+    @app.post("/api/client-log")
+    async def client_log(req: Request):
+        """Pages report what happens in the browser (alerts on/off, speech errors)."""
+        try:
+            d = await req.json()
+            print(f"[client] {str(d.get('page'))[:20]}: {str(d.get('msg'))[:200]}")
+        except Exception:
+            pass
+        return {"ok": True}
+
     @app.post("/reset")
     def reset():
         hub.game.new_session()

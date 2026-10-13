@@ -138,7 +138,7 @@ let speakingSince = 0;
 function next() {                                  // one alert at a time, never piling up
   if (A.speaking) {                                // Chrome/Edge bug: speech can get stuck "speaking"
     speakingSince = speakingSince || Date.now();
-    if (Date.now() - speakingSince > 20000) { A.resetSpeech(); speakingSince = 0; }
+    if (Date.now() - speakingSince > 20000) { A.resetSpeech(); speakingSince = 0; clientLog('speech was stuck -> reset'); }
     return;
   }
   speakingSince = 0;
@@ -165,7 +165,16 @@ function onFeed(e) {
 }
 // "armed": alerts were on before a reload, but the browser needs one click to allow sound again
 let armed = false;
-function setAlerts(on) {
+// tell the server what happens here, so it shows up in `docker logs`
+function clientLog(msg) {
+  try {
+    fetch('/api/client-log', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                               body: JSON.stringify({ page: 'menu', msg }), keepalive: true });
+  } catch (e) {}
+}
+window.clientLog = clientLog;
+function setAlerts(on, why) {
+  if (why) clientLog('alerts ' + (on ? 'ON' : 'OFF') + ' (' + why + ')');
   alertsOn = on;
   armed = false;
   const b = document.getElementById('alerts');
@@ -178,15 +187,16 @@ function setAlerts(on) {
 document.getElementById('alerts').onclick = ev => {
   ev.stopPropagation();
   A.enable();
-  setAlerts(armed ? true : !alertsOn);
+  setAlerts(armed ? true : !alertsOn, 'button click');
   if (alertsOn) A.say(t('alert.hello'));
 };
 let saved = false;
 try { saved = localStorage.getItem('alerts') === '1'; } catch (e) {}
 setAlerts(false);
+clientLog('menu loaded, alerts were ' + (saved ? 'ON -> waiting for sound permission' : 'OFF'));
 if (saved) {                                       // restore after a reload
   A.enable();                                      // works without a click if the site may autoplay
-  setTimeout(() => { if (armed && A.running) setAlerts(true); }, 400);
+  setTimeout(() => { if (armed && A.running) setAlerts(true, 'restored after reload, autoplay allowed'); }, 400);
   armed = true;
   const b = document.getElementById('alerts');
   b.dataset.i18n = 'alert.armed';
@@ -196,10 +206,12 @@ if (saved) {                                       // restore after a reload
   document.addEventListener('click', ev => {
     if (!armed || (ev.target && ev.target.id === 'alerts')) return;   // the button handles itself
     A.enable();
-    setAlerts(true);
+    setAlerts(true, 'click on page after reload');
     queue.length = 0;
   }, { capture: true, once: true });
 }
+document.addEventListener('visibilitychange', () => clientLog('tab ' + document.visibilityState + (alertsOn ? ' (alerts on)' : '')));
+window.addEventListener('pagehide', () => clientLog('page closed or reloaded'));
 Live.start({ game: null, onFeed });
 </script>
 </body>

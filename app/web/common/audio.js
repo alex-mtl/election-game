@@ -74,6 +74,7 @@ window.AudioKit = (() => {
     u.lang = voice ? voice.lang : (lang === 'ru' ? 'ru-RU' : 'en-US'); u.volume = 1;
     u.rate = Math.min(10, (o.excited ? 1.2 : 1.05) * rateMul); u.pitch = o.excited ? 1.35 : 1.05;
     if (o.onend) u.onend = o.onend;
+    u.onerror = ev => { if (window.clientLog) clientLog('speech error: ' + (ev.error || '?')); if (o.onend) o.onend(); };
     synth.speak(u);
   }
   function nextVoice() {
