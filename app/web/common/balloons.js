@@ -51,15 +51,26 @@ window.Balloons = (() => {
                         20% { opacity: 1; transform: translate(-50%, -2vh) scale(1.1); }
                         to { opacity: 0; transform: translate(-50%, -10vh) scale(1); } }`;
 
-  const SVG = `<svg viewBox="0 0 100 150">
-      <defs><radialGradient id="bl-g" cx="35%" cy="30%" r="75%">
-        <stop offset="0" stop-color="#ff9cc4"/><stop offset=".45" stop-color="#ff2d75"/><stop offset="1" stop-color="#b3003c"/>
+  // every balloon gets its own colour when it appears: a random rainbow hue, light and bright
+  // (pastel with a little neon) - never dark navy / green / purple
+  let gid = 0;
+  function svg() {
+    const id = 'bl-g' + (++gid), h = Math.floor(Math.random() * 360);
+    const sat = 90 + Math.floor(Math.random() * 10);
+    // blue / violet look darker at the same lightness: lift them so they stay pastel
+    const up = h >= 205 && h <= 295 ? 9 : (h >= 180 && h < 205) || (h > 295 && h <= 320) ? 4 : 0;
+    const light = `hsl(${h} ${sat}% ${90 + up / 3}%)`, main = `hsl(${h} ${sat}% ${70 + up}%)`,
+          edge = `hsl(${h} 80% ${60 + up}%)`;
+    return `<svg viewBox="0 0 100 150">
+      <defs><radialGradient id="${id}" cx="35%" cy="30%" r="75%">
+        <stop offset="0" stop-color="${light}"/><stop offset=".45" stop-color="${main}"/><stop offset="1" stop-color="${edge}"/>
       </radialGradient></defs>
-      <path d="M50 92 C 22 72, 2 52, 6 30 C 10 10, 36 4, 50 22 C 64 4, 90 10, 94 30 C 98 52, 78 72, 50 92 Z" fill="url(#bl-g)"/>
+      <path d="M50 92 C 22 72, 2 52, 6 30 C 10 10, 36 4, 50 22 C 64 4, 90 10, 94 30 C 98 52, 78 72, 50 92 Z" fill="url(#${id})"/>
       <ellipse cx="27" cy="27" rx="9" ry="5" fill="#fff" opacity=".45" transform="rotate(-35 27 27)"/>
-      <path d="M45 97 L50 91 L55 97 Z" fill="#b3003c"/>
+      <path d="M45 97 L50 91 L55 97 Z" fill="${edge}"/>
       <path d="M50 97 C 44 108, 56 118, 49 128 C 44 136, 54 142, 50 150" stroke="#fff" stroke-opacity=".75"
             stroke-width="1.1" fill="none"/></svg>`;
+  }
 
   function avatar(name, url) {
     if (url && /^https:\/\//.test(url)) {
@@ -77,7 +88,7 @@ window.Balloons = (() => {
   function makeBalloon(u) {
     const b = document.createElement('div');
     b.className = 'balloon';
-    b.innerHTML = '<div class="sway"><div class="body">' + SVG + '<div class="tag"></div></div></div><div class="meter"></div>';
+    b.innerHTML = '<div class="sway"><div class="body">' + svg() + '<div class="tag"></div></div></div><div class="meter"></div>';
     b.querySelector('.body').insertBefore(avatar(u.name, u.avatar), b.querySelector('.tag'));
     b.querySelector('.tag').textContent = u.name;
     return b;
