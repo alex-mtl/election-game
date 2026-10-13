@@ -5,6 +5,8 @@
   const fmt = n => Number(n).toLocaleString(I18N.lang === 'ru' ? 'ru-RU' : 'en-US');   // 22,344 / 22 344
   const clean = n => (n || '').replace(/[^\p{L}\p{N} ._'-]/gu, '').trim() || 'Someone';
   const tKey = s => (s || '').toLowerCase().replace(/\s/g, '');
+  // streak params: {n} for English, {wins} = "2 победы" / {winsUp} = "2 ПОБЕДЫ" (Russian plural forms)
+  const streakP = n => ({ n, wins: I18N.n(n, 'win'), winsUp: I18N.n(n, 'win').toUpperCase() });
   let S = null;                       // last state
   let vocab = 30000;
 
@@ -103,7 +105,12 @@
     FX[kind](arg);
   }
   // voice: important moments only; low-priority lines are skipped while speaking
-// key phrases (round start, winner and the word) at normal speed (rate 1), the rest at VOICE_RATE  function voice(text, prio, rate) {    if (!A.ready) return;    if (prio === 'urgent') A.say(text, { urgent: true, excited: true, rate });    else if (prio === 'high' || !A.speaking) A.say(text, { excited: true, rate });  }
+  // key phrases (round start, winner and the word) at normal speed (rate 1), the rest at VOICE_RATE
+  function voice(text, prio, rate) {
+    if (!A.ready) return;
+    if (prio === 'urgent') A.say(text, { urgent: true, excited: true, rate });
+    else if (prio === 'high' || !A.speaking) A.say(text, { excited: true, rate });
+  }
 
   // ------------------------------------------------------------ big toasts (queued, 1-3 s)
   const queue = []; let showing = false;
@@ -175,8 +182,8 @@
         break;
       case 'streak':
         fx('streak', e.n);
-        toast(t('g.t.streak', { n: e.n }), name, 'var(--orange)', { huge: e.n >= 3, important: true, hold: e.n >= 5 ? 2.8 : 2 });
-        voice(t('g.v.streak', { name, n: e.n }), 'high');
+        toast(t('g.t.streak', streakP(e.n)), name, 'var(--orange)', { huge: e.n >= 3, important: true, hold: e.n >= 5 ? 2.8 : 2 });
+        voice(t('g.v.streak', Object.assign(streakP(e.n), { name })), 'high');
         break;
       case 'gift':
         fx('gift');
@@ -322,7 +329,7 @@
     const lines = [];
     if (s.leader) lines.push(t('g.tag.beat', { name: s.leader.name, rank: fmt(s.leader.rank) }));
     if (s.stats.top100 >= 2) lines.push(t('g.tag.top100', { players: I18N.n(s.stats.top100, 'player') }));
-    if (s.streak) lines.push(t('g.tag.streak', { name: s.streak.name, n: s.streak.n }));
+    if (s.streak) lines.push(t('g.tag.streak', Object.assign(streakP(s.streak.n), { name: s.streak.name })));
     if (s.stats.guesses) lines.push(t('g.tag.count', { guesses: I18N.n(s.stats.guesses, 'guess') }));
     if (!lines.length) lines.push(t('g.tag.default'));
     const now = Date.now();
@@ -347,7 +354,7 @@
       const chips = ['⏱ ' + Math.floor(w.seconds / 60) + ':' + String(w.seconds % 60).padStart(2, '0'),
                      '🎯 ' + I18N.n(w.guesses, 'guess'), t('g.w.best', { n: fmt(w.best) })];
       chips.forEach(c => $('wChips').append(el('span', 'chip', c)));
-      if (w.streak >= 2) $('wChips').append(el('span', 'chip streak', t('g.w.streak', { n: w.streak })));
+      if (w.streak >= 2) $('wChips').append(el('span', 'chip streak', t('g.w.streak', streakP(w.streak))));
     } else {
       $('wName').textContent = ''; $('wSub').textContent = t('g.w.was');
     }
