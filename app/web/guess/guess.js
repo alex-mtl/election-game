@@ -197,23 +197,23 @@
         if (e.dq) mini(t('g.t.followToPlay', { name }), 'follow');
         else {
           mini(t('g.t.followNeeded', { name, n: e.seconds }), 'follow');
-          voice(t('g.v.followNeeded', { name }));
+          voice(t('g.v.followNeeded', { name }), 'high', 1);
         }
         break;
       case 'found_pending':
         fx('close', 'so_close');
         toast(t('g.t.foundPending', { name: NAME }), t('g.t.foundPendingSub', { n: e.seconds }), 'var(--magenta)', { huge: true, important: true, hold: 2.6 });
-        voice(t('g.v.foundPending', { name }), 'high');
+        voice(t('g.v.foundPending', { name }), 'high', 1);
         break;
       case 'follow_ok':
         fx('follow');
         toast(t('g.t.thanks', { name: NAME }), t('g.t.thanksSub'), 'var(--violet)', { important: true });
-        voice(t('g.v.thanks', { name }));
+        voice(t('g.v.thanks', { name }), 'high', 1);
         break;
       case 'dq':
         fx('timeout');
         toast(t('g.t.sorry', { name: NAME }), t('g.t.sorrySub'), 'var(--pink)', { important: true, hold: 2.4 });
-        voice(t('g.v.sorry', { name }), 'high');
+        voice(t('g.v.sorry', { name }), 'high', 1);
         break;
       case 'unknown':                     // shown in the list (grey) so the player sees it was read
         addFresh(Object.assign({}, e, { unknown: true }), 2500);
@@ -510,7 +510,7 @@
         if (lobby && !v.start && left > 35) {
           v.start = true;
           const mins = Math.round(left / 60);
-          voice(t('g.v.break', { t: mins >= 1 ? I18N.n(mins, 'minute') : t('g.seconds', { n: left }) }), 'high');
+          voice(t('g.v.break', { t: mins >= 1 ? I18N.n(mins, 'minute') : t('g.seconds', { n: left }) }), 'high', 1);
         }
         if (!v.soon && left <= 30 && left > 25) {
           v.soon = true;
