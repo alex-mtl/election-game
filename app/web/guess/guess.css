@@ -238,3 +238,9 @@ body { display: flex; justify-content: center; }
             text-shadow: 0 0 .4em var(--magenta); animation: pulse 1s infinite; }
 .hrow.pending { background: linear-gradient(90deg, rgba(255,43,214,.16), transparent); box-shadow: inset 2px 0 0 var(--magenta); }
 .hrow.pending .av { opacity: .8; }
+
+/* during play only the list matters: no "secret word" and "top hunters" panels
+   (winner / results screens keep the word, podium and leaders) */
+#secret, #hunters { display: none; }
+#toast { top: calc(var(--u) * 16); }
+#miniToasts { top: calc(var(--u) * 15); }

@@ -314,7 +314,7 @@
     };
     fresh.forEach(f => { box.append(guessRow(f, 'fresh' + (f.shown ? '' : ' new'))); f.shown = true; });
     const shown = new Set(fresh.map(f => f.word));
-    best.filter(g => !shown.has(g.word)).slice(0, 7 - fresh.length).forEach(g => box.append(guessRow(g, mark(g))));
+    best.filter(g => !shown.has(g.word)).slice(0, 12 - fresh.length).forEach(g => box.append(guessRow(g, mark(g))));
     box.querySelectorAll('.wd, .rk').forEach(fitCell);           // long words and long ranks shrink to fit
     prevWords = new Map(best.map(g => [g.word, g.count]));
   }
