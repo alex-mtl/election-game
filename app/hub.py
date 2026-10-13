@@ -4,6 +4,7 @@ runs ticks/simulation, saves state and pushes updates to overlays."""
 import asyncio
 import json
 import time
+from collections import deque
 
 from . import config
 from .games import GAMES
@@ -25,6 +26,10 @@ class Hub:
         self.clients = set()                      # websockets
         self.sent_seq = {name: g.seq for name, g in self.games.items()}
         self.tiktok_status = "offline"
+        # stream feed (comments, gifts) for the menu page's alerts, independent of the game
+        self.feed = deque(maxlen=100)
+        self.feed_seq = 0
+        self.feed_sent = 0
         self.game.on_activate()
 
     @property
@@ -67,13 +72,21 @@ class Hub:
             self.save_session()
             print(f"[hub] new LIVE (room {room_id}) -> all games reset")
 
+    def _feed(self, **e):
+        self.feed_seq += 1
+        e.update(seq=self.feed_seq, t=time.time())
+        self.feed.append(e)
+
     def comment(self, v: Viewer, text):
+        self._feed(type="chat", name=v.name, avatar=v.avatar, text=text[:200],
+                   host=v.id.lower() == config.TIKTOK_USERNAME.lower())
         self.game.on_comment(v, text)
 
     def join(self, v: Viewer):
         self.game.on_join(v)
 
     def gift(self, v: Viewer, gift, count):
+        self._feed(type="gift", name=v.name, avatar=v.avatar, gift=gift, count=count)
         self.game.on_gift(v, gift, count)
 
     def follow(self, v: Viewer):
@@ -83,9 +96,11 @@ class Hub:
         self.game.on_like(v, count)
 
     # ---- state for overlays ----
-    def message(self, name, since=None):
+    def message(self, name, since=None, feed_since=None):
         g = self.games[name]
         return {"active": self.active, "game": name, "seq": g.seq, "now": time.time(),
+                "feedSeq": self.feed_seq,
+                "feed": [e for e in self.feed if e["seq"] > feed_since] if feed_since is not None else [],
                 "tiktok": self.tiktok_status, "version": getattr(self, "web_version", ""),
                 "lang": self.lang,
                 "events": g.events_since(since) if since is not None else [],
@@ -115,13 +130,16 @@ class Hub:
         while True:
             await asyncio.sleep(0.1)
             g = self.game
-            if not g.dirty or not self.clients:
+            feed_new = self.feed_seq != self.feed_sent
+            if not (g.dirty or feed_new) or not self.clients:
                 g.dirty = False
                 self.sent_seq[g.name] = g.seq
+                self.feed_sent = self.feed_seq
                 continue
             g.dirty = False
-            msg = json.dumps(self.message(g.name, self.sent_seq[g.name]), ensure_ascii=False)
+            msg = json.dumps(self.message(g.name, self.sent_seq[g.name], self.feed_sent), ensure_ascii=False)
             self.sent_seq[g.name] = g.seq
+            self.feed_sent = self.feed_seq
             for ws in list(self.clients):
                 try:
                     await ws.send_text(msg)

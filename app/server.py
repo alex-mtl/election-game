@@ -20,6 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
+from .games.base import Viewer
 
 WEB = os.path.join(os.path.dirname(__file__), "web")
 
@@ -80,9 +81,9 @@ def create_app(hub):
         return hub.message(hub.active, since)
 
     @app.get("/api/state")
-    def api_state(game: str | None = None, since: int | None = None):
+    def api_state(game: str | None = None, since: int | None = None, fsince: int | None = None):
         name = game if game in hub.games else hub.active
-        return hub.message(name, since)
+        return hub.message(name, since, fsince)
 
     @app.post("/reset")
     def reset():
@@ -98,7 +99,15 @@ def create_app(hub):
             params = await req.json()
         except Exception:
             params = {}
-        return JSONResponse(hub.game.debug(action, params if isinstance(params, dict) else {}))
+        params = params if isinstance(params, dict) else {}
+        name = (params.get("name") or "Tester")[:30]
+        if action == "chat":                         # as if it came from TikTok: feed + active game
+            hub.comment(Viewer(name.lower(), name, ""), params.get("text") or params.get("word") or "hello!")
+            return {"ok": True}
+        if action == "gift":
+            hub.gift(Viewer(name.lower(), name, ""), params.get("gift") or "Rose", 1)
+            return {"ok": True}
+        return JSONResponse(hub.game.debug(action, params))
 
     @app.websocket("/ws")
     async def ws(websocket: WebSocket):

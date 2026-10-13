@@ -1,9 +1,10 @@
 // Live connection to the server: WebSocket, falls back to polling /api/state.
-// Live.start({game, onState(state, msg), onEvent(event)})
+// Live.start({game, onState(state, msg), onEvent(event), onFeed(streamEvent)})
+// - game: null = page not tied to a game (menu): only onFeed (comments / gifts of the stream)
 // - follows the active game: if another game is picked in the menu, this page navigates there
 // - Live.now() = server clock in seconds (timers stay in sync with the server)
 window.Live = (() => {
-  let opts, lastSeq = null, offset = 0, ws = null, pollTimer = null, wsRetry = null, version = null;
+  let opts, lastSeq = null, feedSeq = null, offset = 0, ws = null, pollTimer = null, wsRetry = null, version = null;
 
   function handle(msg) {
     offset = msg.now * 1000 - Date.now();
@@ -15,6 +16,15 @@ window.Live = (() => {
     if (msg.lang && window.I18N) {                 // language picked in the menu
       if (I18N.lang && I18N.lang !== msg.lang) { location.reload(); return; }
       I18N.set(msg.lang);
+    }
+    if (msg.feedSeq !== undefined) {               // stream feed: comments / gifts
+      if (feedSeq === null || msg.feedSeq < feedSeq) feedSeq = msg.feedSeq;   // no replay on (re)load
+      else {
+        (msg.feed || []).filter(e => e.seq > feedSeq).forEach(e => {
+          try { opts.onFeed && opts.onFeed(e); } catch (err) { console.error(err); }
+        });
+        feedSeq = Math.max(feedSeq, msg.feedSeq);
+      }
     }
     if (opts.game && msg.active && msg.active !== opts.game) {
       location.href = '/' + msg.active + '/' + location.search;
@@ -34,7 +44,8 @@ window.Live = (() => {
 
   async function poll() {
     try {
-      const q = '?game=' + opts.game + (lastSeq === null ? '' : '&since=' + lastSeq);
+      const q = '?game=' + (opts.game || '') + (lastSeq === null ? '' : '&since=' + lastSeq) +
+                (feedSeq === null ? '' : '&fsince=' + feedSeq);
       handle(await (await fetch('/api/state' + q, { cache: 'no-store' })).json());
     } catch (e) { /* server unreachable: keep last state on screen */ }
   }
