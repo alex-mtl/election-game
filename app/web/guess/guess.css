@@ -276,3 +276,5 @@ body { display: flex; justify-content: center; }
 
 /* crisp plates: no glow/blur, solid contrast against the dark background */
 .grow .main .bar { opacity: 1; background: currentColor; box-shadow: none; }
+/* fixed player column -> every proximity plate is measured against the same width */
+.grow .who { flex: 0 0 34%; max-width: 34%; justify-content: flex-end; overflow: hidden; }
