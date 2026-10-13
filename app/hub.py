@@ -137,8 +137,13 @@ class Hub:
         self.game.on_follow(v)
 
     def like(self, v: Viewer, count):
+        before = self.balloons.total_of(v.id)
         for b in self.balloons.on_like(v, count):  # 100 likes -> lift off, on whatever page is open
             self._feed(type="balloon", **b)
+        plane = self.balloons.auto_plane(v, before)  # every PLANE_AUTO_LIKES likes -> the plane flies by itself
+        if plane:
+            print(f"[plane] {v.name}: {plane['total']} likes -> auto plane")
+            self._feed(type="plane", **plane)
         self.game.on_like(v, count)
 
     # ---- state for overlays ----

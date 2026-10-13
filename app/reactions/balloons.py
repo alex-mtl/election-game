@@ -58,6 +58,19 @@ class LikeBalloons:
         u["name"], u["avatar"] = viewer.name, viewer.avatar or u["avatar"]
         return {"id": viewer.id, "name": u["name"], "avatar": u["avatar"], "total": total}, "ok"
 
+    def total_of(self, viewer_id):
+        u = self.likes.get(viewer_id)
+        return u["total"] if u else 0
+
+    def auto_plane(self, viewer, before):
+        """Plane without a command when the viewer crosses 1000, 2000, ... likes this stream."""
+        step = config.PLANE_AUTO_LIKES
+        u = self.likes.get(viewer.id)
+        if not step or not u or u["total"] // step <= before // step:
+            return None
+        u["plane_t"], u["plane_likes"] = time.time(), u["total"]   # counts as a "!likes!" use too
+        return {"id": viewer.id, "name": u["name"], "avatar": u["avatar"], "total": u["total"], "auto": True}
+
     def new_session(self):
         self.likes = {}
         self.dirty = True

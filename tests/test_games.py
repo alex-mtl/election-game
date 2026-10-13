@@ -308,6 +308,24 @@ class PlaneTest(unittest.TestCase):
         self.assertNotIn("mika", hub.games["guess"].players)      # the command is not a guess
 
 
+class AutoPlaneTest(unittest.TestCase):
+    def test_plane_flies_by_itself_every_1000_likes(self):
+        from app.hub import Hub
+        config.PLANE_AUTO_LIKES = 1000
+        hub = Hub(JsonStore(tempfile.mkdtemp()))
+        d = Viewer("ded", "DED", "")
+        planes = lambda: [e for e in hub.feed if e["type"] == "plane"]
+        hub.like(d, 990)
+        self.assertEqual(planes(), [])
+        hub.like(d, 15)                                          # 1005 -> auto plane
+        self.assertEqual(len(planes()), 1)
+        self.assertEqual(planes()[-1]["total"], 1005)
+        hub.like(d, 500)
+        self.assertEqual(len(planes()), 1)                       # next one only at 2000
+        hub.like(d, 600)
+        self.assertEqual(len(planes()), 2)
+
+
 class BattleTest(unittest.TestCase):
     def test_cooldowns_and_join(self):
         b = BattleGame(JsonStore(tempfile.mkdtemp()))
