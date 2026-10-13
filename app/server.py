@@ -117,6 +117,12 @@ def create_app(hub):
         if action == "chat":                         # as if it came from TikTok: feed + active game
             hub.comment(Viewer(name.lower(), name, ""), params.get("text") or params.get("word") or "hello!")
             return {"ok": True}
+        if action == "like":
+            hub.like(Viewer(name.lower(), name, ""), int(params.get("n") or 10))
+            return {"ok": True}
+        if action == "balloon":
+            hub.like(Viewer(name.lower(), name, ""), config.LIKES_PER_BALLOON)
+            return {"ok": True}
         if action == "join":
             hub.join(Viewer(name.lower(), name, ""))
             return {"ok": True}

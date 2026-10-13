@@ -3,12 +3,14 @@ runs ticks/simulation, saves state and pushes updates to overlays."""
 
 import asyncio
 import json
+import random
 import time
 from collections import deque
 
 from . import config
 from .games import GAMES
 from .games.base import Viewer
+from .reactions.balloons import LikeBalloons
 
 
 class Hub:
@@ -35,6 +37,7 @@ class Hub:
         self.feed_seq = 0
         self.feed_sent = 0
         self.greeted = set()                      # viewers already welcomed this stream
+        self.balloons = LikeBalloons(store)       # like balloons fly over every page
         self.game.on_activate()
 
     @property
@@ -83,6 +86,7 @@ class Hub:
             for g in self.games.values():
                 g.new_session()
             self.greeted = set()
+            self.balloons.new_session()
             self.save_session()
             print(f"[hub] new LIVE (room {room_id}) -> all games reset")
 
@@ -113,6 +117,8 @@ class Hub:
         self.game.on_follow(v)
 
     def like(self, v: Viewer, count):
+        for b in self.balloons.on_like(v, count):  # 100 likes -> lift off, on whatever page is open
+            self._feed(type="balloon", **b)
         self.game.on_like(v, count)
 
     # ---- state for overlays ----
@@ -124,6 +130,7 @@ class Hub:
                 "tiktok": self.tiktok_status, "version": getattr(self, "web_version", ""),
                 "lang": self.lang, "voiceRate": config.VOICE_RATE,
                 "events": g.events_since(since) if since is not None else [],
+                "balloons": self.balloons.snapshot(),
                 "state": g.snapshot()}
 
     # ---- background loops ----
@@ -131,6 +138,7 @@ class Hub:
         while True:
             try:
                 self.game.tick(time.time())
+                self.balloons.tick(time.time())
             except Exception as e:
                 print("[hub] tick error:", type(e).__name__, e)
             await asyncio.sleep(0.25)
@@ -143,6 +151,7 @@ class Hub:
                     g.save()
                 except Exception as e:
                     print(f"[hub] save error ({g.name}):", e)
+            self.balloons.save()
             self.save_session()
 
     async def broadcaster(self):
@@ -150,13 +159,13 @@ class Hub:
         while True:
             await asyncio.sleep(0.1)
             g = self.game
-            feed_new = self.feed_seq != self.feed_sent
+            feed_new = self.feed_seq != self.feed_sent or self.balloons.dirty
             if not (g.dirty or feed_new) or not self.clients:
-                g.dirty = False
+                g.dirty = self.balloons.dirty = False
                 self.sent_seq[g.name] = g.seq
                 self.feed_sent = self.feed_seq
                 continue
-            g.dirty = False
+            g.dirty = self.balloons.dirty = False
             msg = json.dumps(self.message(g.name, self.sent_seq[g.name], self.feed_sent), ensure_ascii=False)
             self.sent_seq[g.name] = g.seq
             self.feed_sent = self.feed_seq
@@ -171,6 +180,9 @@ class Hub:
         while True:
             try:
                 delay = self.game.simulate_step()
+                if random.random() < 0.25:            # fake likes -> balloons on every page
+                    n = random.choice(["Alex", "Mike", "Sarah", "Emma"])
+                    self.like(Viewer(n.lower(), n, ""), random.choice([3, 5, 8, 15]))
             except Exception as e:
                 print("[sim] error:", type(e).__name__, e)
                 delay = 1

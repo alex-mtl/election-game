@@ -525,5 +525,8 @@
   A.mount({ rules: () => ($('rules').hidden ? showRules(12000) : ($('rules').hidden = true)),
             hello: 'g.v.hello' });
   showRules(7000);
-  Live.start({ game: 'guess', onState: render, onEvent, onFeed: e => Greeter.push(e) });
+  // like balloons fly over the game too (only the lift-off, nothing sits on top of the list)
+  Balloons.mount({ ground: false, width: 'calc(var(--u) * 20)', sound: true });
+  Live.start({ game: 'guess', onState: render, onEvent,
+               onFeed: e => { if (e.type === 'balloon') Balloons.launch(e); else Greeter.push(e); } });
 })();
