@@ -40,6 +40,9 @@
   .alerts { font: 900 calc(var(--u) * 3.6) var(--font-display); padding: .55em 1.1em; border-radius: 999px; cursor: pointer;
             background: transparent; color: var(--gold); border: 2px solid var(--gold); box-shadow: 0 0 1em rgba(255,216,74,.35); }
   .alerts.on { color: #000; background: var(--gold); }
+  .alerts.armed { animation: blink 1.2s infinite; }
+  .alerts.missed { color: #fff; border-color: var(--pink); background: var(--pink); box-shadow: 0 0 1.4em var(--pink); }
+  @keyframes blink { 50% { opacity: .45; } }
   #feed { width: calc(var(--u) * 86); padding: calc(var(--u) * 3); }
   #feed[hidden] { display: none; }
   #feed .ft { font: 900 calc(var(--u) * 3.2) var(--font-display); color: var(--cyan); letter-spacing: .15em; margin-bottom: .4em; }
@@ -148,24 +151,46 @@ setInterval(next, 400);
 function onFeed(e) {
   addFeedLine(e);
   if (e.type === 'chat' && e.host) return;        // your own comments don't ring
+  if (armed) document.getElementById('alerts').classList.add('missed');   // sound still locked: flash
   queue.push(e);
   while (queue.length > 3) queue.shift();         // busy chat: keep only the latest
   next();
 }
+// "armed": alerts were on before a reload, but the browser needs one click to allow sound again
+let armed = false;
 function setAlerts(on) {
   alertsOn = on;
+  armed = false;
   const b = document.getElementById('alerts');
   b.dataset.i18n = on ? 'alert.on' : 'alert.off';
   b.textContent = t(b.dataset.i18n);
   b.classList.toggle('on', on);
+  b.classList.remove('armed', 'missed');
   try { localStorage.setItem('alerts', on ? '1' : '0'); } catch (e) {}
 }
-document.getElementById('alerts').onclick = () => {
+document.getElementById('alerts').onclick = ev => {
+  ev.stopPropagation();
   A.enable();
-  setAlerts(!alertsOn);
+  setAlerts(armed ? true : !alertsOn);
   if (alertsOn) A.say(t('alert.hello'));
 };
+let saved = false;
+try { saved = localStorage.getItem('alerts') === '1'; } catch (e) {}
 setAlerts(false);
+if (saved) {                                       // restore after a reload: any click re-enables sound
+  armed = true;
+  const b = document.getElementById('alerts');
+  b.dataset.i18n = 'alert.armed';
+  b.textContent = t('alert.armed');
+  b.classList.add('armed');
+  try { localStorage.setItem('alerts', '1'); } catch (e) {}
+  document.addEventListener('click', ev => {
+    if (!armed || (ev.target && ev.target.id === 'alerts')) return;   // the button handles itself
+    A.enable();
+    setAlerts(true);
+    queue.length = 0;
+  }, { capture: true, once: true });
+}
 Live.start({ game: null, onFeed });
 </script>
 </body>
