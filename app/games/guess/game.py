@@ -250,7 +250,10 @@ class GuessGame(BaseGame):
                                       "avatar": p.avatar, "t": now}
         if g is not None:
             g["count"] += 1
-            g["last"] = p.name
+            g["last"], g["last_avatar"], g["last_id"] = p.name, p.avatar, p.id
+            ids = g.setdefault("ids", [])
+            if p.id not in ids and len(ids) < 50:
+                ids.append(p.id)
             g["t"] = now
             if word in self.recent:
                 self.recent.remove(word)
@@ -526,9 +529,16 @@ class GuessGame(BaseGame):
     # ------------------------------------------------------------------ public state
     def _row(self, g):
         temp = temperature(g["rank"])
+        p = self.players.get(g.get("last_id"))
         return {"word": g["word"].upper(), "rank": g["rank"], "temp": temp, "tempKey": temp_key(temp),
                 "count": g["count"], "name": g.get("last") or g["name"], "first": g["name"],
-                "avatar": g["avatar"]}
+                "avatar": g.get("last_avatar", g["avatar"]),
+                "pendingUntil": p.pending_until if p and p.pending_until else 0}
+
+    def _visible(self, g):
+        """Hide words only guessed by players removed for not following."""
+        ids = g.get("ids")
+        return not ids or any(not (self.players.get(i) and self.players[i].dq) for i in ids)
 
     def snapshot(self):
         now = time.time()
@@ -540,7 +550,7 @@ class GuessGame(BaseGame):
             hunters.append({"name": p.name, "avatar": p.avatar, "rank": p.best, "temp": t,
                             "tempKey": temp_key(t), "guesses": p.guesses, "prev": p.prev,
                             "leader": p.id == self.leader_id, "pendingUntil": p.pending_until})
-        best = sorted(self.guesses.values(), key=lambda g: g["rank"])
+        best = sorted((g for g in self.guesses.values() if self._visible(g)), key=lambda g: g["rank"])
         return {
             "error": self.error,
             "phase": self.phase,

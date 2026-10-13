@@ -278,3 +278,7 @@ body { display: flex; justify-content: center; }
 .grow .main .bar { opacity: 1; background: currentColor; box-shadow: none; }
 /* fixed player column -> every proximity plate is measured against the same width */
 .grow .who { flex: 0 0 34%; max-width: 34%; justify-content: flex-end; overflow: hidden; }
+
+/* not following yet: magenta countdown next to the name */
+.grow .who .fw { font: 800 calc(var(--u) * 2.6) var(--font-display); color: var(--magenta); white-space: nowrap;
+                 text-shadow: 0 0 .4em var(--magenta); animation: pulse 1s infinite; }

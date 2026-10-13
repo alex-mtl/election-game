@@ -279,7 +279,11 @@
     const bar = el('i', 'bar t-' + g.tempKey);
     const who = el('div', 'who');
     who.append(avatar(g.name, g.avatar), el('span', 'n', g.name));
-    if (g.count > 1) who.append(el('span', 'cnt', t('g.more', { n: g.count - 1 })));
+    if (g.pendingUntil) {                       // not following yet: countdown to follow
+      row.classList.add('pending');
+      const fw = el('span', 'fw'); fw.dataset.until = g.pendingUntil; fw.dataset.short = '1';
+      who.append(fw);
+    } else if (g.count > 1) who.append(el('span', 'cnt', t('g.more', { n: g.count - 1 })));
     if (g.unknown) {
       row.classList.add('unknown');
       main.append(el('span', 'rk', '?'), el('span', 'wd', g.word), el('span', 'note', t('g.notInDict')));
@@ -471,8 +475,8 @@
   function clock() {
     if (!S || S.error) return;
     const now = Live.now();
-    document.querySelectorAll('#hunterList .fw').forEach(n => {
-      n.textContent = t('g.follow', { n: Math.max(0, Math.ceil(Number(n.dataset.until) - now)) });
+    document.querySelectorAll('.fw').forEach(n => {
+      n.textContent = t(n.dataset.short ? 'g.followShort' : 'g.follow', { n: Math.max(0, Math.ceil(Number(n.dataset.until) - now)) });
     });
     const timerEl = $('timer');
     if (S.phase === 'playing') {

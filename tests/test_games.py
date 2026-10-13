@@ -190,9 +190,11 @@ class FollowTest(GuessTest):
         p = g.players["logan"]
         self.assertTrue(p.pending_until)
         self.assertEqual(g.snapshot()["topHunters"][0]["name"], "Logan")   # shown meanwhile
+        self.assertTrue(g.snapshot()["bestGuesses"][0]["pendingUntil"])     # countdown in the row
         g.tick(p.pending_until + 0.1)
         self.assertTrue(p.dq)
         self.assertEqual(g.snapshot()["topHunters"], [])                    # removed
+        self.assertEqual(g.snapshot()["bestGuesses"], [])                   # their words hidden too
         g.on_follow(self.nf("Logan"))                                       # follows later -> back
         self.assertFalse(p.dq)
         self.assertEqual(g.snapshot()["topHunters"][0]["name"], "Logan")
