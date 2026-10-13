@@ -58,6 +58,8 @@
   </div>
   <div class="langs"><span data-i18n="menu.lang">LANGUAGE</span>
     <button data-lang="en">EN</button><button data-lang="ru">RU</button></div>
+  <div class="langs"><span data-i18n="menu.break">BREAK BETWEEN ROUNDS</span>
+    <button data-break="1" data-i18n="menu.on">ON</button><button data-break="0" data-i18n="menu.off">OFF</button></div>
   <div class="games" id="games"></div>
   <button class="alerts" id="alerts" data-i18n="alert.off">🔕 STREAM ALERTS: OFF</button>
   <div id="feed" class="panel" hidden><div class="ft" data-i18n="alert.feed">LIVE CHAT</div><div id="feedList"></div></div>
@@ -69,7 +71,9 @@
 const t = I18N.t;
 let state = null;
 function render() {
-  document.querySelectorAll('.langs button').forEach(b => b.classList.toggle('on', b.dataset.lang === state.lang));
+  document.querySelectorAll('.langs button[data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === state.lang));
+  const brk = state.options ? state.options.break !== false : true;
+  document.querySelectorAll('.langs button[data-break]').forEach(b => b.classList.toggle('on', (b.dataset.break === '1') === brk));
   const box = document.getElementById('games');
   box.replaceChildren();
   state.games.forEach(g => {
@@ -88,7 +92,12 @@ function render() {
     box.appendChild(b);
   });
 }
-document.querySelectorAll('.langs button').forEach(b => b.onclick = async () => {
+document.querySelectorAll('.langs button[data-break]').forEach(b => b.onclick = async () => {
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify({ break: b.dataset.break === '1' }) });
+  load();
+});
+document.querySelectorAll('.langs button[data-lang]').forEach(b => b.onclick = async () => {
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
                                  body: JSON.stringify({ lang: b.dataset.lang }) });
   load();

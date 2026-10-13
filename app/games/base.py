@@ -56,6 +56,9 @@ class BaseGame:
     def on_like(self, viewer: Viewer, count: int):
         pass
 
+    def set_option(self, key, value):
+        """A game setting changed in the menu (e.g. guess: break between rounds)."""
+
     def set_lang(self, lang):
         """Interface/word language changed in the menu."""
 

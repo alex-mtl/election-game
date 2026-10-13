@@ -71,6 +71,7 @@ class GuessGame(BaseGame):
             print("[guess]", self.error)
         self.lang = config.LANGUAGE if config.LANGUAGE in self.sems else next(iter(self.sems), "en")
         self.round_lang = self.lang                  # language of the round being played
+        self.round_break = config.ROUND_BREAK        # pause (results + promo) between rounds
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
         if isinstance(used, list):                   # old format: English only
@@ -389,6 +390,13 @@ class GuessGame(BaseGame):
         self.phase = IDLE
         self.dirty = True
 
+    def set_option(self, key, value):
+        if key == "break":
+            self.round_break = bool(value)
+            if not self.round_break and self.phase == REVEAL:   # switched off during a break
+                self.phase = FINISHED
+            self.dirty = True
+
     @property
     def sem(self):
         return self.sems.get(self.round_lang) or self.sems.get(self.lang)
@@ -430,6 +438,10 @@ class GuessGame(BaseGame):
                 if best > 300:
                     self.give_hint("auto", now)
         elif self.phase == WINNER and now >= self.phase_until:
+            if not self.round_break:                     # non-stop: winner card, then next round
+                self.phase = FINISHED
+                self.dirty = True
+                return
             self.phase = REVEAL
             self.phase_until = now + config.REVEAL_SEC
             self.emit("reveal", word=self.secret.upper())

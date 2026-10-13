@@ -214,6 +214,30 @@ class FollowTest(GuessTest):
         self.assertFalse(any(p.pending_until for p in g.players.values()))
 
 
+class NonStopTest(unittest.TestCase):
+    def test_no_break_goes_straight_to_next_round(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.set_option("break", False)
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        first = g.round_id
+        g.on_comment(v("Alex"), g.secret)
+        self.assertEqual(g.phase, guess_mod.WINNER)
+        g.tick(g.phase_until + 0.1)                          # winner card over -> no reveal
+        self.assertEqual(g.phase, guess_mod.FINISHED)
+        g.tick(time.time())
+        self.assertEqual(g.phase, guess_mod.COUNTDOWN)
+        self.assertEqual(g.round_id, first + 1)
+
+    def test_switch_off_during_break(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        g.on_comment(v("Alex"), g.secret)
+        g.tick(g.phase_until + 0.1)
+        self.assertEqual(g.phase, guess_mod.REVEAL)          # break on by default
+        g.set_option("break", False)
+        self.assertEqual(g.phase, guess_mod.FINISHED)
+
+
 class StreamerTest(unittest.TestCase):
     def test_likes_inflate_and_launch(self):
         from app.games.streamer.game import StreamerOverlay

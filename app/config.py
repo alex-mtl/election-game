@@ -47,6 +47,7 @@ SPEED_ROUND_EVERY = _i("SPEED_ROUND_EVERY", 4)          # every Nth round is SPE
 COUNTDOWN_SEC = _i("COUNTDOWN_SEC", 4)                  # 3, 2, 1, GO
 WINNER_SEC = _i("WINNER_SEC", 5)                        # winner card
 REVEAL_SEC = _i("REVEAL_SEC", 115)                      # break between rounds: results, then promo/lobby
+ROUND_BREAK = _b("ROUND_BREAK", "1")                    # default for the menu switch: pause between rounds
 RESULTS_SEC = _i("RESULTS_SEC", 25)                     # first part of the break shows the round results
 LANGUAGES = ["en", "ru"]
 GREET_JOINS = _b("GREET_JOINS", "1")                    # welcome viewers who join the LIVE (once per stream)

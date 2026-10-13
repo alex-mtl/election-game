@@ -21,6 +21,10 @@ class Hub:
         self.room_id = s.get("room_id") or (store.load("state.json") or {}).get("room_id")
         self.active = s.get("active") if s.get("active") in self.games else config.DEFAULT_GAME
         self.lang = s.get("lang") or config.LANGUAGE
+        self.options = {"break": config.ROUND_BREAK, **s.get("options", {})}   # menu switches
+        for g in self.games.values():
+            for k, v in self.options.items():
+                g.set_option(k, v)
         for g in self.games.values():
             g.set_lang(self.lang)
         self.clients = set()                      # websockets
@@ -62,7 +66,15 @@ class Hub:
         print(f"[hub] language -> {lang}")
 
     def save_session(self):
-        self.store.save(self.SESSION, {"room_id": self.room_id, "active": self.active, "lang": self.lang})
+        self.store.save(self.SESSION, {"room_id": self.room_id, "active": self.active, "lang": self.lang,
+                                       "options": self.options})
+
+    def set_option(self, key, value):
+        self.options[key] = value
+        for g in self.games.values():
+            g.set_option(key, value)
+        self.save_session()
+        print(f"[hub] option {key} -> {value}")
 
     # ---- TikTok -> active game ----
     def new_live(self, room_id):

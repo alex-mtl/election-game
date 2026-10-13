@@ -58,15 +58,18 @@ def create_app(hub):
     @app.get("/api/games")
     def games():
         return {"active": hub.active, "games": hub.menu(), "lang": hub.lang,
-                "languages": config.LANGUAGES}
+                "languages": config.LANGUAGES, "options": hub.options}
 
     @app.post("/api/settings")
     async def settings(req: Request):
         body = await req.json()
-        if body.get("lang") not in config.LANGUAGES:
-            raise HTTPException(400, "unknown language")
-        hub.set_lang(body["lang"])
-        return {"lang": hub.lang}
+        if "break" in body:
+            hub.set_option("break", bool(body["break"]))
+        if "lang" in body:
+            if body["lang"] not in config.LANGUAGES:
+                raise HTTPException(400, "unknown language")
+            hub.set_lang(body["lang"])
+        return {"lang": hub.lang, "options": hub.options}
 
     @app.post("/api/active")
     async def set_active(req: Request):
