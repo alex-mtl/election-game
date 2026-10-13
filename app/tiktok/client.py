@@ -145,7 +145,10 @@ class TikTokConnector:
             hub.follow(viewer_of(event.user))
 
         def like(event):
-            hub.like(viewer_of(event.user), max(1, int(getattr(event, "count", 1) or 1)))
+            v, n = viewer_of(event.user), max(1, int(getattr(event, "count", 1) or 1))
+            if config.LOG_CHAT:
+                print(f"[like] {v.name} (@{v.id}) +{n}")
+            hub.like(v, n)
 
         client.on(CommentEvent)(safe(comment))
         client.on(JoinEvent)(safe(join))

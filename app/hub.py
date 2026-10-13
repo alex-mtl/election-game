@@ -10,7 +10,7 @@ from collections import deque
 from . import config
 from .games import GAMES
 from .games.base import Viewer
-from .reactions.balloons import LikeBalloons
+from .reactions.balloons import LIKES_CMD, LikeBalloons
 
 
 class Hub:
@@ -98,6 +98,12 @@ class Hub:
     def comment(self, v: Viewer, text):
         self._feed(type="chat", name=v.name, avatar=v.avatar, text=text[:200],
                    host=v.id.lower() == config.TIKTOK_USERNAME.lower())
+        if LIKES_CMD.match(text or ""):              # "!likes!" is a command, not a game move
+            plane, why = self.balloons.likes_command(v)
+            print(f"[plane] {v.name}: !likes! -> {why}")
+            if plane:
+                self._feed(type="plane", **plane)
+            return
         self.game.on_comment(v, text)
 
     def join(self, v: Viewer):

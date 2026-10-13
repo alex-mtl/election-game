@@ -530,5 +530,9 @@
   Balloons.mount({ ground: true, area: $('stage'), bottom: 'calc(var(--u) * 26)',
                    width: 'calc(var(--u) * 20)', sound: true });
   Live.start({ game: 'guess', onState: (s, msg) => { render(s); Balloons.render(msg.balloons); }, onEvent,
-               onFeed: e => { if (e.type === 'balloon') Balloons.launch(e); else Greeter.push(e); } });
+               onFeed: e => {
+                 if (e.type === 'balloon') Balloons.launch(e);
+                 else if (e.type === 'plane') Plane.fly(e, { sound: true });
+                 else Greeter.push(e);
+               } });
 })();

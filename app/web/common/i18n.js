@@ -29,6 +29,7 @@ window.I18N = (() => {
       'menu.streamer.d': 'Transparent overlay on top of your video: viewers fill heart balloons with likes and they fly up with their avatar!',
       'menu.streamer.chat': '❤ 100 LIKES = 🎈 BALLOON',
       's.v.balloon': 'Thank you {name} for {n} likes!',
+      'plane.banner': '{likes} this stream', 'plane.v': '{name}: {likes} this stream! Thank you!',
       // ---------- battle ----------
       'b.red': 'Red', 'b.yellow': 'Yellow', 'b.typeR': 'Type R', 'b.typeY': 'Type Y', 'b.round': 'Round {n}',
       'b.hint': 'Type <b>R</b> in chat for Red, <b>Y</b> for Yellow. Tap as many times as you want!',
@@ -109,6 +110,7 @@ window.I18N = (() => {
       'menu.streamer.d': 'Прозрачный слой поверх твоего видео: зрители надувают лайками шарики-сердечки, и те взлетают с их аватаром!',
       'menu.streamer.chat': '❤ 100 ЛАЙКОВ = 🎈 ШАРИК',
       's.v.balloon': 'Спасибо, {name}, за {n} лайков!',
+      'plane.banner': '{likes} за стрим', 'plane.v': '{name}: {likes} за стрим! Спасибо!',
       'b.red': 'Красные', 'b.yellow': 'Жёлтые', 'b.typeR': 'Пиши К', 'b.typeY': 'Пиши Ж', 'b.round': 'Раунд {n}',
       'b.hint': 'Пиши в чат <b>К</b> — за красных, <b>Ж</b> — за жёлтых. Можно много раз!',
       'b.redWins': '🏆 ПОБЕДА КРАСНЫХ!', 'b.yellowWins': '🏆 ПОБЕДА ЖЁЛТЫХ!', 'b.mvp': 'MVP: {name} — {taps}',
@@ -170,10 +172,10 @@ window.I18N = (() => {
   // plural forms: en [one, other], ru [one, few, many]
   const P = {
     en: { win: ['win', 'wins'], podium: ['podium', 'podiums'], guess: ['guess', 'guesses'], player: ['player', 'players'],
-          tap: ['tap', 'taps'], point: ['point', 'points'], letter: ['LETTER', 'LETTERS'], minute: ['minute', 'minutes'] },
+          tap: ['tap', 'taps'], point: ['point', 'points'], like: ['like', 'likes'], letter: ['LETTER', 'LETTERS'], minute: ['minute', 'minutes'] },
     ru: { win: ['победа', 'победы', 'побед'], podium: ['пьедестал', 'пьедестала', 'пьедесталов'],
           guess: ['догадка', 'догадки', 'догадок'], player: ['игрок', 'игрока', 'игроков'], tap: ['тап', 'тапа', 'тапов'],
-          point: ['очко', 'очка', 'очков'], letter: ['БУКВА', 'БУКВЫ', 'БУКВ'], minute: ['минуту', 'минуты', 'минут'] },
+          point: ['очко', 'очка', 'очков'], like: ['лайк', 'лайка', 'лайков'], letter: ['БУКВА', 'БУКВЫ', 'БУКВ'], minute: ['минуту', 'минуты', 'минут'] },
   };
   let lang = null;
 

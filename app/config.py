@@ -38,7 +38,9 @@ TEAM_COOLDOWN_SEC = _f("TEAM_COOLDOWN_SEC", 5)
 WIN_PAUSE_SEC = _f("WIN_PAUSE_SEC", 15)
 
 # ---- streamer overlay ----
-LIKES_PER_BALLOON = _i("LIKES_PER_BALLOON", 100)        # likes from one viewer -> their balloon takes off
+LIKES_PER_BALLOON = _i("LIKES_PER_BALLOON", 100)
+PLANE_MIN_LIKES = _i("PLANE_MIN_LIKES", 20)              # "!likes!" works after more than this many likes
+PLANE_COOLDOWN_SEC = _i("PLANE_COOLDOWN_SEC", 60)        # ...then once a minute (or after 100 new likes)        # likes from one viewer -> their balloon takes off
 
 # ---- guess the word ----
 ROUND_DURATION = _i("ROUND_DURATION", 210)

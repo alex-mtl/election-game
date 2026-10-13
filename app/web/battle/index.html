@@ -76,6 +76,7 @@
 <script src="/common/live.js"></script>
 <script src="/common/audio.js"></script>
 <script src="/common/greet.js"></script>
+<script src="/common/plane.js"></script>
 <script>
 const A = AudioKit, t = I18N.t;
 function renderTop(id, list){
@@ -193,7 +194,8 @@ function render(s){
 }
 
 A.mount({hello: 'b.v.hello'});
-Live.start({game: 'battle', onState: render, onEvent: handleEvent, onFeed: e => Greeter.push(e)});
+Live.start({game: 'battle', onState: render, onEvent: handleEvent,
+            onFeed: e => { if (e.type === 'plane') Plane.fly(e, {sound: true}); else Greeter.push(e); }});
 </script>
 </body>
 </html>

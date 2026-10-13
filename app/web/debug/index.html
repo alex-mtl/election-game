@@ -68,6 +68,7 @@
   <div class="row">
     <button class="g" data-a="like" style="--c:var(--lime)">like ×n (n field)</button>
     <button class="g" data-a="balloon" style="--c:var(--lime)">balloon now</button>
+    <button class="g" data-a="chat" data-text="!likes!" style="--c:var(--lime)">!likes! plane</button>
   </div>
 </fieldset>
 
@@ -85,7 +86,7 @@ async function refresh() {
 document.querySelectorAll('button[data-a]').forEach(b => b.onclick = async () => {
   const a = b.dataset.a;
   if (a === 'reset' && !confirm('Reset the active game to zero?')) return;
-  const body = { follows: document.getElementById('nofollow').checked ? '0' : '', name: v('name'), word: v('word'), gift: v('gift'), level: v('level'), n: v('n'), color: b.dataset.color };
+  const body = { text: b.dataset.text, follows: document.getElementById('nofollow').checked ? '0' : '', name: v('name'), word: v('word'), gift: v('gift'), level: v('level'), n: v('n'), color: b.dataset.color };
   const r = await fetch('/api/debug/' + a, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   document.getElementById('out').textContent = a + ' → ' + r.status + ' ' + await r.text();
   refresh();

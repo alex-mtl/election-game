@@ -262,6 +262,28 @@ class BalloonsTest(unittest.TestCase):
         self.assertIn("balloons", hub.message("guess"))
 
 
+class PlaneTest(unittest.TestCase):
+    def test_likes_command_rules(self):
+        from app.hub import Hub
+        config.LIKES_PER_BALLOON, config.PLANE_MIN_LIKES, config.PLANE_COOLDOWN_SEC = 100, 20, 60
+        hub = Hub(JsonStore(tempfile.mkdtemp()))
+        hub.set_active("guess")
+        mika = Viewer("mika", "Mikaniri", "")
+        planes = lambda: [e for e in hub.feed if e["type"] == "plane"]
+        hub.like(mika, 15)
+        hub.comment(mika, "!лайки!")
+        self.assertEqual(planes(), [])                            # not more than 20 likes yet
+        hub.like(mika, 10)
+        hub.comment(mika, "!likes!")
+        self.assertEqual(planes()[-1]["total"], 25)               # 25 likes -> plane
+        hub.comment(mika, "!LIKES")
+        self.assertEqual(len(planes()), 1)                        # cooldown: one minute
+        hub.like(mika, 100)
+        hub.comment(mika, "!лайки!")
+        self.assertEqual(len(planes()), 2)                        # 100 new likes lift the cooldown
+        self.assertNotIn("mika", hub.games["guess"].players)      # the command is not a guess
+
+
 class BattleTest(unittest.TestCase):
     def test_cooldowns_and_join(self):
         b = BattleGame(JsonStore(tempfile.mkdtemp()))

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plane demo</title>
+<style>
+  html, body { height: 100%; margin: 0; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif;
+               background: radial-gradient(120% 80% at 50% 0%, #1d0640 0%, #07020f 60%); color: #fff; }
+  .bar { position: fixed; left: 12px; bottom: 12px; z-index: 40; display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font: 800 14px system-ui; padding: 8px 12px; border-radius: 8px; border: 0; cursor: pointer; }
+  .note { position: fixed; left: 12px; top: 12px; opacity: .6; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="note">Demo of the "!likes!" plane (no live stream needed). It loops every 9 s.</div>
+<div class="bar">
+  <button id="fly">✈ fly now</button>
+  <button id="ru">RU</button><button id="en">EN</button>
+  <button id="snd">🔊 sound</button>
+</div>
+<script src="/common/i18n.js"></script>
+<script src="/common/audio.js"></script>
+<script src="/common/plane.js"></script>
+<script>
+  const qs = new URLSearchParams(location.search);
+  I18N.set(qs.get('lang') || 'ru');
+  const people = [
+    { name: 'ДЕД МОРОЗ', avatar: '', total: 1403 },
+    { name: 'Mikaniri', avatar: '', total: 357 },
+    { name: 'Masha', avatar: '', total: 21 },
+  ];
+  let i = 0, sound = false;
+  const go = () => Plane.fly(people[i++ % people.length], { sound });
+  document.getElementById('fly').onclick = go;
+  document.getElementById('ru').onclick = () => { location.search = '?lang=ru'; };
+  document.getElementById('en').onclick = () => { location.search = '?lang=en'; };
+  document.getElementById('snd').onclick = () => { AudioKit.enable(); sound = true; go(); };
+  go();
+  setInterval(go, 9000);
+</script>
+</body>
+</html>
