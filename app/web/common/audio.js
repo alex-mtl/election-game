@@ -6,7 +6,7 @@
 window.AudioKit = (() => {
   const qs = new URLSearchParams(location.search);
   const synth = window.speechSynthesis;
-  let ctx = null, muted = false, voice = null, lang = 'en';
+  let ctx = null, muted = false, voice = null, lang = 'en', rateMul = 1;   // rateMul: VOICE_RATE from .env
   const T = (k, p) => (window.I18N ? I18N.t(k, p) : k);
   try { muted = localStorage.getItem('muted') === '1'; } catch (e) {}
   if (qs.get('sound') === '0') muted = true;
@@ -72,7 +72,7 @@ window.AudioKit = (() => {
     const u = new SpeechSynthesisUtterance(text);
     if (voice) u.voice = voice;
     u.lang = voice ? voice.lang : (lang === 'ru' ? 'ru-RU' : 'en-US'); u.volume = 1;
-    u.rate = o.excited ? 1.2 : 1.05; u.pitch = o.excited ? 1.35 : 1.05;
+    u.rate = Math.min(10, (o.excited ? 1.2 : 1.05) * rateMul); u.pitch = o.excited ? 1.35 : 1.05;
     if (o.onend) u.onend = o.onend;
     synth.speak(u);
   }
@@ -120,13 +120,14 @@ window.AudioKit = (() => {
     }
   }
 
+  function setRate(r) { if (r > 0) rateMul = r; }
   function setLang(l) {
     lang = l;
     pickVoice();
   }
 
   return {
-    tone, noise, say, mount, enable, setLang,
+    tone, noise, say, mount, enable, setLang, setRate,
     get ready() { return !!ctx && !muted; },
     get speaking() { return !!synth && (synth.speaking || synth.pending); },
   };

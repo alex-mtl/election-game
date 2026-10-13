@@ -102,7 +102,7 @@ class Hub:
                 "feedSeq": self.feed_seq,
                 "feed": [e for e in self.feed if e["seq"] > feed_since] if feed_since is not None else [],
                 "tiktok": self.tiktok_status, "version": getattr(self, "web_version", ""),
-                "lang": self.lang,
+                "lang": self.lang, "voiceRate": config.VOICE_RATE,
                 "events": g.events_since(since) if since is not None else [],
                 "state": g.snapshot()}
 
