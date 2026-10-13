@@ -130,5 +130,7 @@ window.AudioKit = (() => {
     tone, noise, say, mount, enable, setLang, setRate,
     get ready() { return !!ctx && !muted; },
     get speaking() { return !!synth && (synth.speaking || synth.pending); },
+    get running() { return !!ctx && ctx.state === 'running'; },      // browser actually allows sound
+    resetSpeech() { if (synth) synth.cancel(); },
   };
 })();
