@@ -203,6 +203,9 @@ function next() {                                  // one alert at a time, never
   }
   speakingSince = 0;
   if (!alertsOn || !A.ready || !queue.length) return;
+  // busy chat: don't read out comments that are already old (they stay in the feed list)
+  while (queue.length && queue[0].type === 'chat' && Live.now() - (queue[0].sent || queue[0].t) > 30) queue.shift();
+  if (!queue.length) return;
   const e = queue.shift();
   const now = Date.now();
   if (e.type === 'join') {                         // merge everyone who joined meanwhile

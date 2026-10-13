@@ -107,8 +107,8 @@ class Hub:
         e.update(seq=self.feed_seq, t=time.time())
         self.feed.append(e)
 
-    def comment(self, v: Viewer, text):
-        self._feed(type="chat", name=v.name, avatar=v.avatar, text=text[:200],
+    def comment(self, v: Viewer, text, ts=None):
+        self._feed(type="chat", name=v.name, avatar=v.avatar, text=text[:200], sent=ts,
                    host=v.id.lower() == config.TIKTOK_USERNAME.lower())
         if LIKES_CMD.match(text or ""):              # "!likes!" is a command, not a game move
             plane, why = self.balloons.likes_command(v)
@@ -118,7 +118,7 @@ class Hub:
             elif plane:
                 self._feed(type="plane", **plane)
             return
-        self.game.on_comment(v, text)
+        self.game.on_comment(v, text, ts)
 
     def join(self, v: Viewer):
         # welcome each viewer once per stream (pages throttle and merge the greetings)

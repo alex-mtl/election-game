@@ -459,7 +459,10 @@
     $('reveal').hidden = s.phase !== 'reveal';
     if (s.phase === 'winner') renderWinner(s);
     if (s.phase === 'reveal') renderReveal(s);
-    if (s.phase === 'countdown') { prevWords = new Map(); prevHunters = new Map(); }
+    if (s.phase === 'countdown') {               // new round: forget everything from the last one
+      prevWords = new Map(); prevHunters = new Map(); fresh = []; queue.length = 0;
+      $('miniToasts').replaceChildren();
+    }
   }
 
   // ------------------------------------------------------------ clock: timer, countdown, last 10 s

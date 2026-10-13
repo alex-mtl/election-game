@@ -123,7 +123,7 @@ class BattleGame(BaseGame):
         return rec, color
 
     # ---- hooks ----
-    def on_comment(self, viewer: Viewer, text: str):
+    def on_comment(self, viewer: Viewer, text: str, ts=None):
         color = parse_color(text)
         if color and self.tap(viewer.id, color, viewer.name):
             print(f"[battle] tap {viewer.name} ({viewer.id}) -> {color}")

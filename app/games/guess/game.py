@@ -198,11 +198,15 @@ class GuessGame(BaseGame):
                 for p in out[:3]]
 
     # ------------------------------------------------------------------ guesses
-    def on_comment(self, viewer: Viewer, text: str):
+    def on_comment(self, viewer: Viewer, text: str, ts=None):
         if not self.sem or self.phase not in (PLAYING, WINNER):
             return
         now = time.time()
         word, raw = self.sem.normalize(text)
+        if raw is not None and ts and self.phase == PLAYING and ts < self.started_at - 3:
+            # typed before this round started (break / countdown) but delivered late by TikTok
+            print(f"[guess] rejected (sent {self.started_at - ts:.0f}s before the round) {viewer.name}: {raw}")
+            return
         if raw is None:
             return                                       # ordinary chat, not a guess
         if self.phase == WINNER:                         # late exact guesses -> podium only

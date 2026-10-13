@@ -28,6 +28,14 @@ def viewer_of(user):
     return Viewer(uid, name, avatar, follows)
 
 
+def sent_at(event):
+    """When the viewer sent it (TikTok create_time, seconds) or None."""
+    ct = getattr(getattr(event, "common", None), "create_time", 0) or 0
+    if ct > 1e12:
+        ct /= 1000
+    return ct or None
+
+
 class TikTokConnector:
     def __init__(self, hub, username):
         self.hub = hub
@@ -102,9 +110,11 @@ class TikTokConnector:
 
         def comment(event):
             v, text = viewer_of(event.user), (getattr(event, "comment", "") or "")[:200]
+            ts = sent_at(event)
             if config.LOG_CHAT:
-                print(f"[chat] {v.name} (@{v.id}) follow={v.follows}: {text!r}")
-            hub.comment(v, text)
+                lag = f" +{time.time() - ts:.0f}s" if ts else ""
+                print(f"[chat] {v.name} (@{v.id}) follow={v.follows}{lag}: {text!r}")
+            hub.comment(v, text, ts)
 
         def join(event):
             hub.join(viewer_of(event.user))

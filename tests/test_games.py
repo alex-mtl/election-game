@@ -95,6 +95,13 @@ class GuessTest(unittest.TestCase):
         g.on_comment(v("Sarah"), g.secret)                      # after timeout: no new winner
         self.assertEqual(g.winner["name"], "Mike")
 
+    def test_guess_sent_before_round_is_ignored(self):
+        g = self.make()
+        g.on_comment(v("Alex"), "water", ts=g.started_at - 20)   # typed during the break, delivered late
+        self.assertNotIn("alex", g.players)
+        g.on_comment(v("Alex"), "water", ts=g.started_at + 1)    # typed in the round
+        self.assertEqual(g.players["alex"].guesses, 1)
+
     def test_streak_and_leaderboard(self):
         g = self.make()
         for _ in range(2):

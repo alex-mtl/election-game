@@ -43,7 +43,8 @@ class BaseGame:
     def on_deactivate(self):
         """Another game was selected: pause timers."""
 
-    def on_comment(self, viewer: Viewer, text: str):
+    def on_comment(self, viewer: Viewer, text: str, ts=None):
+        """ts: when the viewer sent it (TikTok time), None if unknown."""
         pass
 
     def on_join(self, viewer: Viewer):
