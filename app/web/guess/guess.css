@@ -244,3 +244,25 @@ body { display: flex; justify-content: center; }
 #secret, #hunters { display: none; }
 #toast { top: calc(var(--u) * 16); }
 #miniToasts { top: calc(var(--u) * 15); }
+
+/* guess row v3: one line. The proximity bar is a background plate behind "rank WORD",
+   starting at the row start, 1.2x the word height; player on the right */
+#guessList { gap: calc(var(--u) * 1.1); }
+.grow { display: flex; align-items: center; gap: calc(var(--u) * 2); }
+.grow .main { position: relative; flex: 1; min-width: 0; height: calc(var(--u) * 5.6); display: flex;
+              align-items: center; gap: calc(var(--u) * 2); padding: 0 calc(var(--u) * 1.6); }
+.grow .main .bar { position: absolute; left: 0; top: 0; bottom: 0; height: auto; min-width: 0; flex: none;
+                   border-radius: calc(var(--u) * 1.4); background: currentColor; opacity: .28;
+                   box-shadow: 0 0 .8em currentColor; overflow: visible; }
+.grow .rk { position: relative; flex: none; min-width: calc(var(--u) * 9); grid-row: auto; overflow: visible;
+            font: 900 calc(var(--u) * 3) var(--font-display); }
+.grow .wd { position: relative; flex: 1; min-width: 0; font: 800 calc(var(--u) * 4.6)/1 var(--font-display); }
+.grow .who { flex: none; max-width: 38%; display: flex; align-items: center; gap: calc(var(--u) * 1.2);
+             grid-column: auto; grid-row: auto; justify-self: auto; }
+.grow .who .av { width: calc(var(--u) * 5.6); height: calc(var(--u) * 5.6); font-size: calc(var(--u) * 2.6);
+                 border-width: 1.5px; }
+.grow .who .n { font: 700 calc(var(--u) * 3.8)/1 var(--font-text); color: #fff; min-width: 0;
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grow .who .cnt { font: 800 calc(var(--u) * 2.6) var(--font-display); color: var(--lime); white-space: nowrap; }
+.grow .note { position: relative; flex: none; font: 800 calc(var(--u) * 2.3) var(--font-display); color: var(--muted); }
+.grow.fresh { padding: calc(var(--u) * .9) calc(var(--u) * 1.6); }

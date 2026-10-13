@@ -269,23 +269,22 @@
   }
 
   function guessRow(g, cls) {
+    // one line: [ proximity bar behind (rank  WORD) ] [avatar name +N]
     const row = el('div', 'grow ' + (cls || ''));
     row.dataset.badge = t(g.unknown ? 'g.badgeUnknown' : 'g.badgeNew');
-    // [rank] [word / proximity bar] [big avatar + name] — the player is the star of the row
-    const bar = el('div', 'bar t-' + g.tempKey); const fill = el('i');
-    fill.style.width = Math.round(closeness(g.rank) * 100) + '%';
-    bar.append(fill);
+    const main = el('div', 'main');
+    const bar = el('i', 'bar t-' + g.tempKey);
     const who = el('div', 'who');
-    const nm = el('div', 'nm');
-    nm.append(el('span', 'n', g.name));
-    if (g.count > 1) nm.append(el('span', 'cnt', t('g.more', { n: g.count - 1 })));
-    who.append(avatar(g.name, g.avatar), nm);
+    who.append(avatar(g.name, g.avatar), el('span', 'n', g.name));
+    if (g.count > 1) who.append(el('span', 'cnt', t('g.more', { n: g.count - 1 })));
     if (g.unknown) {
       row.classList.add('unknown');
-      row.append(el('div', 'rk', '❓'), el('div', 'wd', g.word), who, el('div', 'bar-note', t('g.notInDict')));
-      return row;
+      main.append(el('span', 'rk', '?'), el('span', 'wd', g.word), el('span', 'note', t('g.notInDict')));
+    } else {
+      bar.style.width = Math.round(closeness(g.rank) * 100) + '%';
+      main.append(bar, el('span', 'rk t-' + g.tempKey, fmt(g.rank)), el('span', 'wd', g.word));
     }
-    row.append(el('div', 'rk t-' + g.tempKey, '#' + fmt(g.rank)), el('div', 'wd', g.word), who, bar);
+    row.append(main, who);
     return row;
   }
 
@@ -314,8 +313,8 @@
     };
     fresh.forEach(f => { box.append(guessRow(f, 'fresh' + (f.shown ? '' : ' new'))); f.shown = true; });
     const shown = new Set(fresh.map(f => f.word));
-    best.filter(g => !shown.has(g.word)).slice(0, 12 - fresh.length).forEach(g => box.append(guessRow(g, mark(g))));
-    box.querySelectorAll('.wd, .rk').forEach(fitCell);           // long words and long ranks shrink to fit
+    best.filter(g => !shown.has(g.word)).slice(0, 18 - fresh.length).forEach(g => box.append(guessRow(g, mark(g))));
+    box.querySelectorAll('.wd').forEach(fitCell);                 // long words shrink to fit
     prevWords = new Map(best.map(g => [g.word, g.count]));
   }
   setInterval(() => {                       // let expired "NEW" rows drop into place
