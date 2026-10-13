@@ -20,7 +20,7 @@
 В нём всё сразу: приложение, обе игры, словари и эмбеддинги для английского и русского.
 
 1. Нужен только Docker Desktop и два файла из репозитория: `docker-compose.yml` и `.env.example`.
-2. Скопируй `.env.example` в `.env`, впиши `TIKTOK_USERNAME=tvoy_nick`.
+2. Скопируй `.env.example` в `.env` (обязательно, без него Docker не запустится) и впиши `TIKTOK_USERNAME=tvoy_nick`.
 3. Запусти — Docker скачает готовый образ (~280 МБ), ничего не собирая:
    ```
    docker compose up -d

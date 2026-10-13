@@ -7,9 +7,8 @@ services:
     pull_policy: missing
     container_name: election-game
     restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
+    # copy .env.example to .env first (plain string form works with every Compose version)
+    env_file: .env
     environment:
       PORT: 8765
       DATA_DIR: /data
