@@ -10,16 +10,23 @@ window.Plane = (() => {
 
   const CSS = `
   .pl-sky { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 1000; }   /* above everything: dialogs, greetings, overlays */
-  .pl-flight { position: absolute; left: 0; top: var(--top); will-change: transform;
+  .pl-flight { position: absolute; left: 0; top: 0; will-change: transform; transform-origin: 50% 50%;
                animation: pl-fly var(--dur) linear forwards; }
+  /* left -> right: banner, rope, plane (mirrored); the pole and the swallowtail swap sides */
+  .pl-flight.rev .pl-row { flex-direction: row-reverse; }
+  .pl-flight.rev .pl-plane { transform: scaleX(-1); }
+  .pl-flight.rev .pl-banner { padding: .3em .45em .3em 1.1em; border-left: calc(var(--ph) * .025) solid #ff2d55;
+               border-right: calc(var(--ph) * .05) solid #8a5a2b; }
+  .pl-flight.rev .pl-banner::after { right: auto; left: calc(var(--ph) * -.2);
+               clip-path: polygon(100% 0, 0 0, 45% 50%, 0 100%, 100% 100%); }
   .pl-bob { animation: pl-bob 2.4s ease-in-out infinite; }
   .pl-row { display: flex; align-items: center; }
   .pl-plane { width: var(--ph); flex: none; filter: drop-shadow(0 .4vh .6vh rgba(0,0,0,.35)); }
   .pl-plane .prop { transform-origin: 9px 30px; animation: pl-prop .09s linear infinite; }
   .pl-rope { width: calc(var(--ph) * .55); height: 2px; flex: none; margin-top: calc(var(--ph) * .02);
              background: repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 6px, rgba(255,255,255,.55) 6px 9px); }
-  .pl-banner { position: relative; display: flex; align-items: center; gap: .5em; flex: none;
-               height: calc(var(--ph) * .52); padding: 0 1.1em 0 .45em; white-space: nowrap;
+  .pl-banner { position: relative; display: flex; flex-direction: column; align-items: stretch; flex: none;
+               padding: .3em 1.1em .3em .45em; white-space: nowrap;
                font: 900 calc(var(--ph) * .19) 'Segoe UI', system-ui, sans-serif; color: #c4002f;
                background: linear-gradient(180deg, #fffdf6, #ffe9ef);
                border: calc(var(--ph) * .025) solid #ff2d55; border-left: calc(var(--ph) * .05) solid #8a5a2b;
@@ -30,7 +37,8 @@ window.Plane = (() => {
   .pl-banner .av { width: calc(var(--ph) * .4); height: calc(var(--ph) * .4); border-radius: 50%; object-fit: cover;
                border: 2px solid #ff2d55; flex: none; display: inline-flex; align-items: center; justify-content: center;
                color: #fff; font-size: calc(var(--ph) * .2); }
-  .pl-banner .nm { color: #1a1033; }
+  .pl-banner .top { display: flex; align-items: center; justify-content: center; gap: .5em; }
+  .pl-banner .nm { color: #1a1033; text-align: center; margin-top: .15em; font-size: .8em; letter-spacing: .02em; }
   .pl-banner .hearts { color: #ff2d55; }
   .pl-deny { position: absolute; left: 50%; top: 9vh; transform: translateX(-50%); max-width: 94vw;
              padding: .45em 1em; border-radius: 999px; background: rgba(10,0,25,.9); color: #fff;
@@ -39,7 +47,8 @@ window.Plane = (() => {
              animation: pl-note 4s ease forwards; }
   @keyframes pl-note { 0% { opacity: 0; transform: translate(-50%, -1em); } 10%, 85% { opacity: 1; transform: translate(-50%, 0); }
                        100% { opacity: 0; transform: translate(-50%, -.5em); } }
-  @keyframes pl-fly { from { transform: translateX(var(--from)); } to { transform: translateX(var(--to)); } }
+  @keyframes pl-fly { from { transform: translate(var(--x0), var(--y0)) rotate(var(--rot)); }
+                      to { transform: translate(var(--x1), var(--y1)) rotate(var(--rot)); } }
   @keyframes pl-bob { 0%, 100% { translate: 0 0; rotate: -1deg; } 50% { translate: 0 calc(var(--ph) * .12); rotate: 1.2deg; } }
   @keyframes pl-prop { from { transform: scaleY(1); } 50% { transform: scaleY(.15); } to { transform: scaleY(1); } }`;
 
@@ -103,23 +112,41 @@ window.Plane = (() => {
     const flight = document.createElement('div');
     flight.className = 'pl-flight';
     flight.style.setProperty('--ph', ph + 'px');
-    flight.style.setProperty('--top', (H * (0.12 + Math.random() * 0.14)) + 'px');
+    const dir = Math.random() < 0.5 ? -1 : 1;           // -1: right -> left, 1: left -> right
+    if (dir > 0) flight.classList.add('rev');
     const bob = document.createElement('div'); bob.className = 'pl-bob';
     const row = document.createElement('div'); row.className = 'pl-row';
     row.innerHTML = PLANE + '<div class="pl-rope"></div>';
     const banner = document.createElement('div'); banner.className = 'pl-banner';
     const likes = document.createElement('span'); likes.className = 'hearts';
     likes.textContent = '❤ ' + Number(e.total).toLocaleString(I18N.lang === 'ru' ? 'ru-RU' : 'en-US');
-    banner.append(avatar(e.name, e.avatar), likes);       // just the avatar and the number
+    const top = document.createElement('div'); top.className = 'top';
+    top.append(avatar(e.name, e.avatar), likes);
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = clean(e.name);
+    banner.append(top, nm);                               // avatar + likes, the nick under them
     row.appendChild(banner);
     bob.appendChild(row); flight.appendChild(bob);
     flight.style.visibility = 'hidden';
     sky.appendChild(flight);
-    const width = row.getBoundingClientRect().width + ph * 0.3;
-    const speed = Math.max(W, 600) / 4.2;               // crosses a screen width in ~4 s
-    const dur = (W + width) / speed;
-    flight.style.setProperty('--from', W + 'px');
-    flight.style.setProperty('--to', -width + 'px');
+    const box = row.getBoundingClientRect();
+    const width = box.width + ph * 0.3;
+    const dx = W + width;                               // from fully off one side to fully off the other
+    // start at 20-80% of the height, climb or dive up to 15 degrees; the end stays within 10-90%
+    const y0 = H * (0.2 + Math.random() * 0.6);
+    let deg = (Math.random() * 2 - 1) * 15;             // + climbs, - dives
+    const endY = d => y0 - dx * Math.tan(d * Math.PI / 180);
+    if (endY(deg) < H * 0.1 || endY(deg) > H * 0.9) deg = -deg;   // turn towards the middle
+    const room = Math.max(y0 - H * 0.1, H * 0.9 - y0);
+    deg = Math.sign(deg) * Math.min(Math.abs(deg), Math.atan(room / dx) * 180 / Math.PI);
+    if (endY(deg) < H * 0.1 || endY(deg) > H * 0.9) deg = -deg;
+    const speed = Math.max(W, 600) / 8.4;               // crosses a screen width in ~8 s
+    const dur = dx / speed;
+    const topPx = y => (y - box.height / 2) + 'px';
+    flight.style.setProperty('--x0', (dir < 0 ? W : -width) + 'px');
+    flight.style.setProperty('--x1', (dir < 0 ? -width : W) + 'px');
+    flight.style.setProperty('--y0', topPx(y0));
+    flight.style.setProperty('--y1', topPx(endY(deg)));
+    flight.style.setProperty('--rot', (-dir * deg).toFixed(1) + 'deg');   // nose follows the path
     flight.style.setProperty('--dur', dur.toFixed(2) + 's');
     flight.style.visibility = '';
     if (o && o.sound && window.AudioKit && AudioKit.ready) {
