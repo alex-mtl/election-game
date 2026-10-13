@@ -9,6 +9,14 @@ SEMANTIC_BANDS = [(120, 400), (40, 120), (12, 40), (4, 12)]
 
 def semantic(game, n_given):
     lo, hi = SEMANTIC_BANDS[min(n_given, len(SEMANTIC_BANDS) - 1)]
+    # never worse than the best word guessed so far: a paid hint must move the game forward
+    best = min((g["rank"] for g in game.guesses.values() if g["rank"] > 1), default=None)
+    if best is not None and hi >= best:
+        hi = best - 1
+        if lo > hi:
+            lo = max(2, hi // 3)
+    if hi < 2:                                   # best is already #2: only the secret is closer
+        return None
     secret = game.secret
     candidates = []
     for i in game.order[lo - 1:hi]:

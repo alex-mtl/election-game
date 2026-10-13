@@ -35,7 +35,12 @@
   document.getElementById('fly').onclick = go;
   document.getElementById('ru').onclick = () => { location.search = '?lang=ru'; };
   document.getElementById('en').onclick = () => { location.search = '?lang=en'; };
-  document.getElementById('snd').onclick = () => { AudioKit.enable(); sound = true; go(); };
+  const snd = document.getElementById('snd');                     // off by default, the button toggles it
+  snd.onclick = () => {
+    sound = !sound;
+    snd.textContent = sound ? '🔇 mute' : '🔊 sound';
+    if (sound) { AudioKit.enable(); go(); } else AudioKit.suspend();
+  };
   go();
   setInterval(go, 15000);
 </script>

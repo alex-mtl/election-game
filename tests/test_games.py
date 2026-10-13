@@ -185,6 +185,21 @@ class GiftHintTest(unittest.TestCase):
         g.on_gift(Viewer("sara", "Sara", "", 1), "Rose", 1)    # no cooldown between gifters
         self.assertEqual(len(g.hints), 2)
 
+    def test_gift_hint_beats_best_guess(self):
+        config.GIFT_HINT_NAMES = ["rose"]
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        close = g.sem.words[int(g.order[29])]                 # someone already guessed the #30 word
+        g.on_comment(Viewer("ann", "Ann", "", 1), close)
+        best = min(x["rank"] for x in g.guesses.values())
+        for i in range(3):
+            g.on_gift(Viewer(f"v{i}", f"V{i}", "", 1), "Rose", 1)
+            h = g.hints[-1]
+            self.assertEqual(h["type"], "semantic")
+            r = int(g.rank[g.sem.index[h["word"].lower()]])
+            self.assertLess(r, best)                           # every paid hint is closer
+            best = min(best, r)
+
 
 class FollowTest(GuessTest):
     def nf(self, name):
