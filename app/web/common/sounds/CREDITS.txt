@@ -1,0 +1,4 @@
+an2-loop.mp3 - a 6 s seamless loop cut from 10-16.6 s of
+"Low passing aeroplane, An-2R (HA-MEN), a bit farther" by ycbcr
+https://freesound.org/s/350574/  -  licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+Changes: cut, mixed to mono, crossfaded into a loop, normalized.

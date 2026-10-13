@@ -199,3 +199,8 @@ docker run --rm -v "%cd%/tests:/app/tests" election-game python -m unittest disc
   странице профиля (игра использует API-поиск).
 - Комментарии доходят с задержкой в 1–3 секунды.
 - Телефон и компьютер должны быть в одной Wi-Fi сети.
+
+## Credits
+
+- Plane engine sound: "Low passing aeroplane, An-2R (HA-MEN), a bit farther" by ycbcr,
+  https://freesound.org/s/350574/, CC BY 4.0 (cut into a loop, see `app/web/common/sounds/CREDITS.txt`).

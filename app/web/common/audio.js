@@ -1,5 +1,5 @@
 // Shared sound + voice for all games (Web Audio synth, browser speech synthesis)
-// and the corner controls (menu, rules, voice, mute). No audio files.
+// and the corner controls (menu, rules, voice, mute). Recorded loops live in common/sounds/.
 //   AudioKit.mount({rules: fn?})          adds "enable sound" overlay + buttons
 //   AudioKit.tone(freq, delay, dur, type, vol, freqEnd)  AudioKit.noise(delay, dur, vol)
 //   AudioKit.say(text, {urgent, excited, onend})
@@ -22,6 +22,34 @@ window.AudioKit = (() => {
     g.gain.exponentialRampToValueAtTime(vol || 0.2, t0 + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     o.connect(g).connect(ctx.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  // a recorded loop (e.g. the plane engine) played for `dur` seconds: loud at once, fading out by
+  // the end; optional stereo pan from one side to the other and a playback-rate tweak
+  const buffers = {};
+  function loadBuffer(url) {
+    if (!buffers[url]) buffers[url] = fetch(url).then(r => r.arrayBuffer()).then(a => ctx.decodeAudioData(a));
+    return buffers[url];
+  }
+  async function loop(url, dur, o = {}) {
+    if (!ctx || muted) return;
+    let buf;
+    try { buf = await loadBuffer(url); } catch (e) { delete buffers[url]; return; }
+    const t0 = ctx.currentTime, end = t0 + dur, vol = o.vol || 0.5;
+    const s = ctx.createBufferSource(), g = ctx.createGain();
+    s.buffer = buf; s.loop = true; s.playbackRate.value = o.rate || 1;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + Math.min(0.5, dur / 4));        // appears: full volume
+    g.gain.setValueAtTime(vol, t0 + dur * (o.hold || 0.25));
+    g.gain.linearRampToValueAtTime(0.0001, end);                                  // fades away to the end
+    let node = s.connect(g);
+    if (ctx.createStereoPanner && o.panFrom !== undefined) {
+      const p = ctx.createStereoPanner();
+      p.pan.setValueAtTime(o.panFrom, t0); p.pan.linearRampToValueAtTime(o.panTo || 0, end);
+      node = node.connect(p);
+    }
+    node.connect(ctx.destination);
+    s.start(t0, Math.random() * buf.duration);                                   // a different bit each time
+    s.stop(end + 0.05);
   }
   function noise(delay, dur, vol, hp) {
     if (!ctx || muted) return;
@@ -129,7 +157,7 @@ window.AudioKit = (() => {
   }
 
   return {
-    tone, noise, say, mount, enable, setLang, setRate,
+    tone, noise, loop, say, mount, enable, setLang, setRate,
     get ready() { return !!ctx && !muted; },
     get speaking() { return !!synth && (synth.speaking || synth.pending); },
     get running() { return !!ctx && ctx.state === 'running'; },      // browser actually allows sound
