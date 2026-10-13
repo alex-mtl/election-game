@@ -13,7 +13,29 @@
 Игра выбирается в меню (`/`). Выбор хранится на сервере: если выбрать игру с телефона,
 окно в LIVE Studio переключится само.
 
-## Быстрый старт (Docker)
+## Запуск без сборки (готовый образ)
+
+Готовый образ публикуется в GitHub Container Registry автоматически при каждом пуше в `main`
+(`.github/workflows/docker-image.yml`): `ghcr.io/alex-mtl/election-game:latest`.
+В нём всё сразу: приложение, обе игры, словари и эмбеддинги для английского и русского.
+
+1. Нужен только Docker Desktop и два файла из репозитория: `docker-compose.yml` и `.env.example`.
+2. Скопируй `.env.example` в `.env`, впиши `TIKTOK_USERNAME=tvoy_nick`.
+3. Запусти — Docker скачает готовый образ (~280 МБ), ничего не собирая:
+   ```
+   docker compose up -d
+   ```
+4. Открой `http://localhost:8765`.
+
+Обновиться до свежей версии:
+```
+docker compose pull
+docker compose up -d
+```
+
+## Быстрый старт (Docker, сборка из исходников)
+
+Для разработки: `docker compose up -d --build` собирает образ локально из кода.
 
 Нужен только Docker Desktop.
 

@@ -1,7 +1,10 @@
 services:
   game:
+    # Ready-made image (built by GitHub Actions on every push to main): `docker compose up -d`
+    # just downloads it. Developers rebuild locally with `docker compose up -d --build`.
+    image: ghcr.io/alex-mtl/election-game:latest
     build: .
-    image: election-game
+    pull_policy: missing
     container_name: election-game
     restart: unless-stopped
     env_file:
