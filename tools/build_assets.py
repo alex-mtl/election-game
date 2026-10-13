@@ -3,6 +3,8 @@
 Build the word assets for "Guess the Word" (once per language, in the Docker build stage):
     python build_assets.py --lang en --out assets/en
     python build_assets.py --lang ru --out assets/ru   (see lang_ru.py)
+    --level easy    the original dictionary: 30k most frequent lemmas of any part of speech
+    --level normal  (default) nouns only, ~35-50k incl. rare animals, plants, tools, science terms
 
 Output (--out dir):
   vocab.txt          every guessable word (lemmas), most frequent first
@@ -129,7 +131,67 @@ def build_en(vocab_size):
     vocab_set = set(vocab)
     aliases = {k: v for k, v in aliases.items() if v in vocab_set}
     print(f"[vocab en] {len(vocab)} words, {len(aliases)} aliases")
+    return (vocab, aliases) + en_pools(vocab)
 
+
+# words of 2 letters are mostly junk (abbreviations, notes); these are real nouns
+EN_SHORT = {"ox", "ax"}
+CONCRETE = {"noun.artifact", "noun.animal", "noun.plant", "noun.food", "noun.body",
+            "noun.object", "noun.substance"}
+
+
+def build_en_normal(vocab_size):
+    """'Normal' level: nouns only, as many as the frequency list has (rare animals, plants,
+    tools, science terms included), so more of what viewers type gets a rank."""
+    bad = profanity_set()
+    vocab, aliases, seen = [], {}, set()
+    for w in top_n_list("en", 2_000_000, wordlist="large"):
+        if not (WORD_RE.match(w) or w in EN_SHORT) or w in bad:
+            continue
+        lemma = wn.morphy(w, wn.NOUN)
+        if not lemma or not (WORD_RE.match(lemma) or lemma in EN_SHORT) or lemma in bad:
+            continue
+        if lemma not in seen:
+            seen.add(lemma)
+            if noun_dominant(lemma) and len(vocab) < vocab_size:
+                vocab.append(lemma)
+        if w != lemma:
+            aliases.setdefault(w, lemma)              # cats -> cat
+    vocab_set = set(vocab)
+    aliases = {k: v for k, v in aliases.items() if v in vocab_set and k not in vocab_set}
+    print(f"[vocab en normal] {len(vocab)} nouns, {len(aliases)} aliases")
+    return (vocab, aliases) + en_pools(vocab)
+
+
+def noun_dominant(w):
+    """A common noun (not only a name) used as a noun at least as often as anything else."""
+    nouns = [s for s in wn.synsets(w) if s.pos() == "n"]
+    if not nouns or all(s.instance_hypernyms() for s in nouns):
+        return False
+    if not re.search(r"[aeiouy]", w):                 # abbreviations
+        return False
+    concrete = any(s.lexname() in CONCRETE for s in nouns)   # a thing: saw, drill, wrench
+    noun_n = other_n = noun_names = 0
+    for s in wn.synsets(w):
+        for lem in s.lemmas():
+            if lem.name().lower() != w:
+                continue
+            if s.pos() == "n":
+                noun_n += lem.count()
+                noun_names += not lem.name()[0].isupper()
+            else:
+                other_n += lem.count()
+    if not noun_names:                                # only "John", "Czech"...
+        return False
+    if concrete:
+        return True
+    if noun_n or other_n:
+        return 2 * noun_n >= other_n                  # "wrench", "hammer": also verbs, still things
+    return len(nouns) >= len(wn.synsets(w)) - len(nouns)
+
+
+def en_pools(vocab):
+    vocab_set = set(vocab)
     pools = {k: [] for k in TIERS}
     categories = {}
     for w in vocab:
@@ -146,24 +208,26 @@ def build_en(vocab_size):
     checks = [("ocean", ["sea", "water", "wave"], ["computer", "banana"]),
               ("dog", ["puppy", "cat"], ["volcano", "invoice"])]
     sources = ["wordfreq (MIT / CC BY-SA 4.0)", "WordNet 3.0", "better_profanity (MIT)"]
-    return vocab, aliases, pools, categories, sources, checks
+    return pools, categories, sources, checks
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--lang", default="en", choices=sorted(MODELS))
     ap.add_argument("--out", default="assets/en")
-    ap.add_argument("--vocab-size", type=int, default=30000)
+    ap.add_argument("--level", default="normal", choices=["easy", "normal"])
+    ap.add_argument("--vocab-size", type=int, default=0, help="default: 30000 easy, 50000 normal")
     args = ap.parse_args()
+    size = args.vocab_size or (30000 if args.level == "easy" else 50000)
     os.makedirs(args.out, exist_ok=True)
     t0 = time.time()
 
     if args.lang == "ru":
-        from lang_ru import build_ru
-        build = build_ru
+        from lang_ru import build_ru, build_ru_normal
+        build = build_ru if args.level == "easy" else build_ru_normal
     else:
-        build = build_en
-    vocab, aliases, pools, categories, sources, checks = build(args.vocab_size)
+        build = build_en if args.level == "easy" else build_en_normal
+    vocab, aliases, pools, categories, sources, checks = build(size)
     model_name = MODELS[args.lang]
 
     from sentence_transformers import SentenceTransformer
@@ -178,7 +242,10 @@ def main():
     with open(os.path.join(args.out, "secret_nouns.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(w for t in pools for w in pools[t]) + "\n")
     with open(os.path.join(args.out, "meta.json"), "w", encoding="utf-8") as f:
-        json.dump({"lang": args.lang, "model": model_name, "sources": sources + [model_name],
+        json.dump({"lang": args.lang, "level": args.level, "model": model_name,
+                   "sources": sources + [model_name],
+                   # close-word hints prefer the most frequent words (the tail is rare/odd)
+                   "hint_limit": 20000 if args.level == "normal" else 0,
                    "pools": pools, "aliases": aliases, "categories": categories},
                   f, ensure_ascii=False)
 

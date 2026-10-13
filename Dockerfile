@@ -11,8 +11,11 @@ RUN pip install pymorphy3 pymorphy3-dicts-ru
 
 WORKDIR /build
 COPY tools/build_assets.py tools/lang_ru.py ./
-RUN python build_assets.py --lang en --out /assets/en
-RUN python build_assets.py --lang ru --out /assets/ru
+# "easy" level = the original dictionary (any part of speech); "normal" = nouns only, bigger
+RUN python build_assets.py --lang en --level easy --out /assets/en-easy
+RUN python build_assets.py --lang ru --level easy --out /assets/ru-easy
+RUN python build_assets.py --lang en --level normal --out /assets/en
+RUN python build_assets.py --lang ru --level normal --out /assets/ru
 
 # ---- stage 2: runtime (small: no torch, no model) ----
 FROM python:3.12-slim

@@ -158,6 +158,33 @@ class RussianTest(unittest.TestCase):
         g.on_comment(Viewer("ivan", "Иван", "", 1), g.secret)  # exact Russian guess wins
         self.assertEqual(g.winner["name"], "Иван")
 
+    def test_levels(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        for k in ("en", "ru", "en-easy", "ru-easy"):
+            self.assertIn(k, g.sems)
+        self.assertEqual(g.get_options()["level"], 2)              # normal by default
+        g.set_lang("ru")
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        normal = g.sem
+        self.assertEqual(normal.level, "normal")
+        n = normal.normalize
+        for w in ("стамеска", "плоскогубцы", "бурундук", "кит", "роза", "еж", "юг"):
+            self.assertIn(w, normal.index)                         # rare / short / name-like nouns
+        self.assertEqual(n("бобр")[0], "бобер")
+        self.assertEqual(n("ежики")[0], "ежик")
+        for w in ("быстро", "красивый", "бежать", "го", "ми"):
+            self.assertNotIn(w, normal.index)                      # not nouns / junk
+        g.set_option("level", 1)                                   # from the next round
+        self.assertIs(g.sem, normal)
+        g.on_comment(Viewer("ivan", "Иван", "", 1), g.secret)
+        for _ in range(10):                                        # winner -> break -> next round
+            if g.phase == guess_mod.COUNTDOWN:
+                break
+            g.tick(max(time.time(), g.phase_until) + 0.1)
+        self.assertEqual(g.sem.level, "easy")
+        self.assertIn("быстро", g.sem.index)                       # easy: any part of speech
+        self.assertEqual(g.snapshot()["languages"], ["en", "ru"])
+
     def test_switch_language_starts_new_round(self):
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
         g.tick(time.time()); g.tick(time.time() + 0.01)
@@ -268,7 +295,7 @@ class NonStopTest(unittest.TestCase):
         g.set_option("round_min", 20)
         g.set_option("follow", 0)
         g.set_option("grace", 60)
-        self.assertEqual(g.get_options(), {"pause": 30, "round_min": 20, "follow": 0, "grace": 60})
+        self.assertEqual(g.get_options(), {"pause": 30, "round_min": 20, "follow": 0, "grace": 60, "level": 2})
         self.assertFalse(g.follow_required)
         g.tick(time.time()); g.tick(time.time() + 0.01)
         self.assertAlmostEqual(g.ends_at - g.started_at, 20 * 60, delta=1)   # 20-minute round

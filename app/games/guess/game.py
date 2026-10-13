@@ -30,7 +30,8 @@ SIM_NAMES = ["Alex", "Mike", "Sarah", "John", "Emma", "Liam", "Olivia", "Noah", 
 
 
 def load_indexes(assets_dir):
-    """{lang: SemanticIndex} for every language folder in assets (assets/en, assets/ru...)."""
+    """{key: SemanticIndex} for every folder in assets: "en", "ru" (normal level) and
+    "en-easy", "ru-easy" (easy level, the original dictionary)."""
     from .semantic import SemanticIndex
     out = {}
     try:
@@ -39,7 +40,7 @@ def load_indexes(assets_dir):
         for lang in sorted(os.listdir(assets_dir)):
             path = os.path.join(assets_dir, lang)
             if os.path.isfile(os.path.join(path, "vocab.txt")):
-                out[lang] = SemanticIndex(path, lang)
+                out[lang] = SemanticIndex(path, lang.split("-")[0])
     except Exception as e:
         print(f"[guess] can't load word assets: {type(e).__name__}: {e}")
     return out
@@ -66,7 +67,8 @@ class GuessGame(BaseGame):
     OPTIONS = {"pause": [0, 10, 30, 60, 120],      # break between rounds, seconds (incl. the winner card)
                "round_min": [10, 20, 30],          # round length, minutes
                "follow": [1, 0],                   # only followers can play / win
-               "grace": [15, 30, 60]}              # seconds a non-follower gets to follow
+               "grace": [15, 30, 60],              # seconds a non-follower gets to follow
+               "level": [1, 2]}                    # dictionary: 1 easy (any word), 2 normal (nouns)
     STATE = "guess/state.json"
     USED = "guess/used_words.json"
     ROUNDS = "guess/rounds.json"
@@ -84,6 +86,7 @@ class GuessGame(BaseGame):
         self.round_sec = config.ROUND_DURATION
         self.follow_required = config.FOLLOW_REQUIRED    # only followers can play (menu setting)
         self.follow_grace = int(config.FOLLOW_GRACE_SEC)
+        self.level = self.round_level = 2            # dictionary level, from the next round
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
         if isinstance(used, list):                   # old format: English only
@@ -123,7 +126,7 @@ class GuessGame(BaseGame):
         self.round_id += 1
         every = config.SPEED_ROUND_EVERY
         self.round_type = "speed" if every and self.round_id % every == 0 else "normal"
-        self.round_lang = self.lang
+        self.round_lang, self.round_level = self.lang, self.level
         used = self.used.setdefault(self.lang, set())
         self.secret, self.tier = self.sem.pick_secret(self._next_tier(), used)
         used.add(self.secret)
@@ -427,11 +430,14 @@ class GuessGame(BaseGame):
             self.follow_required = bool(value)
         elif key == "grace":
             self.follow_grace = int(value)
+        elif key == "level" and int(value) in self.OPTIONS["level"]:
+            self.level = int(value)                      # from the next round
         self.dirty = True
 
     def get_options(self):
         return {"pause": self.pause_sec, "round_min": self.round_sec // 60,
-                "follow": int(self.follow_required), "grace": int(self.follow_grace)}
+                "follow": int(self.follow_required), "grace": int(self.follow_grace),
+                "level": self.level}
 
     @property
     def reveal_sec(self):
@@ -440,7 +446,9 @@ class GuessGame(BaseGame):
 
     @property
     def sem(self):
-        return self.sems.get(self.round_lang) or self.sems.get(self.lang)
+        lang = self.round_lang if self.round_lang in self.sems else self.lang
+        level = self.round_level                     # = self.level from the next countdown on
+        return (level == 1 and self.sems.get(lang + "-easy")) or self.sems.get(lang)             or self.sems.get(lang + "-easy")
 
     def set_lang(self, lang):
         """Switch the word language: the current round is dropped and a new one starts."""
@@ -618,7 +626,7 @@ class GuessGame(BaseGame):
             "subscribersOnly": config.SUBSCRIBERS_ONLY,
             "breakSec": self.reveal_sec, "resultsSec": min(config.RESULTS_SEC, self.reveal_sec),
             "promo": config.PROMO_LINES_RU if self.lang == "ru" else config.PROMO_LINES,
-            "lang": self.round_lang, "languages": sorted(self.sems),
+            "lang": self.round_lang, "languages": sorted({k.split("-")[0] for k in self.sems}),
             "goal": {"label": config.GOAL_LABEL, "value": self.stats.follows,
                      "target": config.GOAL_TARGET} if config.GOAL_TARGET else None,
         }
@@ -637,6 +645,7 @@ class GuessGame(BaseGame):
             "hints": self.hints, "auto_hint_done": self.auto_hint_done,
             "finished_at": self.finished_at, "difficulty": self.difficulty,
             "saved_at": self.paused_at or time.time(), "lang": self.round_lang,
+            "level": self.round_level, "next_level": self.level,
         })
 
     def load(self):
@@ -646,6 +655,8 @@ class GuessGame(BaseGame):
         try:
             if d.get("lang") in self.sems:
                 self.round_lang = d["lang"]
+            self.round_level = d.get("level", 1)          # rounds saved before levels: easy
+            self.level = d.get("next_level", 2)
             self.round_id = d["round_id"]
             self.tier = d.get("tier", "easy")
             self.difficulty = [tuple(x) for x in d.get("difficulty", [])]

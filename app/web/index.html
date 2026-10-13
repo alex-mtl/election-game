@@ -116,6 +116,8 @@ const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Typ
                                          body: JSON.stringify(body) });
 // option labels: on/off switches are [1, 0]; "0" of some options has its own word ("no break", "off")
 const optLabel = (key, v, choices) => {
+  const own = 'set.' + key + '.' + v;                   // a word for this exact value ("easy")
+  if (I18N.t(own) !== own) return t(own);
   if (choices.length === 2 && choices.includes(1) && choices.includes(0)) return t(v ? 'set.on' : 'set.off');
   if (v === 0 && I18N.t('set.' + key + '.none') !== 'set.' + key + '.none') return t('set.' + key + '.none');
   return t('set.' + key + '.v', { n: v });

@@ -27,6 +27,8 @@ class SemanticIndex:
         self.aliases = meta.get("aliases", {})
         self.pools = meta.get("pools", {})
         self.categories = meta.get("categories", {})
+        self.level = meta.get("level", "easy")
+        self.hint_limit = meta.get("hint_limit", 0)       # hints prefer words[:hint_limit]
         self.size = len(self.words)
         print(f"[semantic {lang}] {self.size} words, pools "
               f"{ {k: len(v) for k, v in self.pools.items()} }")

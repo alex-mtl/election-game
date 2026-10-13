@@ -18,14 +18,16 @@ def semantic(game, n_given):
     if hi < 2:                                   # best is already #2: only the secret is closer
         return None
     secret = game.secret
-    candidates = []
+    candidates, rare = [], []
+    limit = getattr(game.sem, "hint_limit", 0)
     for i in game.order[lo - 1:hi]:
         w = game.sem.words[int(i)]
         if w in game.guesses or w == secret or secret in w or w in secret:
             continue
-        if any(h.get("word") == w for h in game.hints):
+        if any(h.get("word", "").lower() == w for h in game.hints):
             continue
-        candidates.append(w)
+        (rare if limit and int(i) >= limit else candidates).append(w)
+    candidates = candidates or rare                  # rare words only if nothing common is left
     if not candidates:
         return None
     w = random.choice(candidates[:20])
