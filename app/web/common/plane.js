@@ -9,7 +9,7 @@ window.Plane = (() => {
   let flying = false;
 
   const CSS = `
-  .pl-sky { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 31; }
+  .pl-sky { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 1000; }   /* above everything: dialogs, greetings, overlays */
   .pl-flight { position: absolute; left: 0; top: var(--top); will-change: transform;
                animation: pl-fly var(--dur) linear forwards; }
   .pl-bob { animation: pl-bob 2.4s ease-in-out infinite; }
