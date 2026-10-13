@@ -48,6 +48,21 @@
   #feed .ft { font: 900 calc(var(--u) * 3.2) var(--font-display); color: var(--cyan); letter-spacing: .15em; margin-bottom: .4em; }
   .fl { font-size: calc(var(--u) * 3.6); font-weight: 700; padding: .2em 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .fl.gift { color: var(--gold); }
+  .setup { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+           background: rgba(5, 0, 14, .82); padding: calc(var(--u) * 5); }
+  .setup[hidden] { display: none; }
+  .setbox { width: calc(var(--u) * 86); padding: calc(var(--u) * 5); display: flex; flex-direction: column;
+            gap: calc(var(--u) * 3.5); }
+  .setbox .st { font: 900 calc(var(--u) * 5.6) var(--font-display); color: var(--cyan);
+                text-shadow: 0 0 .3em var(--cyan); }
+  .sfield { display: flex; align-items: center; justify-content: space-between; gap: calc(var(--u) * 3);
+            font: 700 calc(var(--u) * 4.2) var(--font-text); }
+  .sfield select { font: 800 calc(var(--u) * 4) var(--font-display); color: var(--text); background: #12062a;
+                   border: 2px solid var(--line); border-radius: calc(var(--u) * 2); padding: .35em .6em; cursor: pointer; }
+  .sbtns { display: flex; justify-content: flex-end; gap: calc(var(--u) * 3); margin-top: calc(var(--u) * 2); }
+  .sbtn { font: 900 calc(var(--u) * 4) var(--font-display); padding: .55em 1.1em; border-radius: 999px; cursor: pointer;
+          background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  .sbtn.go { color: #000; background: var(--lime); border-color: var(--lime); box-shadow: 0 0 1em var(--lime); }
   .langs button.on { color: #000; background: var(--lime); border-color: var(--lime); box-shadow: 0 0 1em var(--lime); }
 </style>
 </head>
@@ -58,8 +73,15 @@
   </div>
   <div class="langs"><span data-i18n="menu.lang">LANGUAGE</span>
     <button data-lang="en">EN</button><button data-lang="ru">RU</button></div>
-  <div class="langs"><span data-i18n="menu.break">BREAK BETWEEN ROUNDS</span>
-    <button data-break="1" data-i18n="menu.on">ON</button><button data-break="0" data-i18n="menu.off">OFF</button></div>
+  <!-- game settings dialog, shown when a game is started -->
+  <div id="setup" class="setup" hidden>
+    <div class="panel setbox">
+      <div class="st" id="setTitle"></div>
+      <div id="setFields"></div>
+      <div class="sbtns"><button id="setCancel" class="sbtn" data-i18n="set.cancel">Cancel</button>
+        <button id="setStart" class="sbtn go" data-i18n="set.start">▶ START</button></div>
+    </div>
+  </div>
   <div class="games" id="games"></div>
   <button class="alerts" id="alerts" data-i18n="alert.off">🔕 STREAM ALERTS: OFF</button>
   <div id="feed" class="panel" hidden><div class="ft" data-i18n="alert.feed">LIVE CHAT</div><div id="feedList"></div></div>
@@ -72,8 +94,6 @@ const t = I18N.t;
 let state = null;
 function render() {
   document.querySelectorAll('.langs button[data-lang]').forEach(b => b.classList.toggle('on', b.dataset.lang === state.lang));
-  const brk = state.options ? state.options.break !== false : true;
-  document.querySelectorAll('.langs button[data-break]').forEach(b => b.classList.toggle('on', (b.dataset.break === '1') === brk));
   const box = document.getElementById('games');
   box.replaceChildren();
   state.games.forEach(g => {
@@ -84,19 +104,45 @@ function render() {
     const d = document.createElement('div'); d.className = 'd'; d.textContent = t('menu.' + g.name + '.d');
     const c = document.createElement('div'); c.className = 'chat'; c.textContent = t('menu.' + g.name + '.chat');
     b.append(now, ti, d, c);
-    b.onclick = async () => {
-      await fetch('/api/active', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                   body: JSON.stringify({ game: g.name }) });
-      location.href = '/' + g.name + '/' + location.search;
-    };
+    b.onclick = () => (Object.keys(g.options || {}).length ? openSetup(g) : startGame(g, null));
     box.appendChild(b);
   });
 }
-document.querySelectorAll('.langs button[data-break]').forEach(b => b.onclick = async () => {
-  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                 body: JSON.stringify({ break: b.dataset.break === '1' }) });
-  load();
-});
+// ---------- game settings dialog (each game describes its options; see OPTIONS on the server) ----------
+const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                         body: JSON.stringify(body) });
+const optLabel = (key, v) => t('set.' + key + '.v', { n: v });
+async function startGame(g, options) {
+  if (options) await post('/api/settings', { game: g.name, options });
+  await post('/api/active', { game: g.name });
+  location.href = '/' + g.name + '/' + location.search;
+}
+function openSetup(g) {
+  document.getElementById('setTitle').textContent = '⚙ ' + t('game.' + g.name);
+  const box = document.getElementById('setFields');
+  box.replaceChildren();
+  Object.entries(g.options).forEach(([key, choices]) => {
+    const row = document.createElement('label'); row.className = 'sfield';
+    const cap = document.createElement('span'); cap.textContent = t('set.' + key);
+    const sel = document.createElement('select'); sel.dataset.key = key;
+    choices.forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v === 0 && key === 'pause' ? t('set.pause.none') : optLabel(key, v);
+      if ((g.values || {})[key] === v) o.selected = true;
+      sel.appendChild(o);
+    });
+    row.append(cap, sel);
+    box.appendChild(row);
+  });
+  const dlg = document.getElementById('setup');
+  dlg.hidden = false;
+  document.getElementById('setCancel').onclick = () => { dlg.hidden = true; };
+  document.getElementById('setStart').onclick = () => {
+    const options = {};
+    box.querySelectorAll('select').forEach(s => { options[s.dataset.key] = Number(s.value); });
+    startGame(g, options);
+  };
+}
 document.querySelectorAll('.langs button[data-lang]').forEach(b => b.onclick = async () => {
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
                                  body: JSON.stringify({ lang: b.dataset.lang }) });

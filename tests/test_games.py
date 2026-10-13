@@ -230,6 +230,18 @@ class NonStopTest(unittest.TestCase):
         self.assertEqual(g.phase, guess_mod.COUNTDOWN)
         self.assertEqual(g.round_id, first + 1)
 
+    def test_pause_and_round_length_options(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.set_option("pause", 30)
+        g.set_option("round_min", 20)
+        self.assertEqual(g.get_options(), {"pause": 30, "round_min": 20})
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        self.assertAlmostEqual(g.ends_at - g.started_at, 20 * 60, delta=1)   # 20-minute round
+        g.on_comment(v("Alex"), g.secret)
+        g.tick(g.phase_until + 0.1)
+        self.assertEqual(g.phase, guess_mod.REVEAL)
+        self.assertAlmostEqual(g.phase_until - g.finished_at, 30, delta=1)   # whole break = 30 s
+
     def test_switch_off_during_break(self):
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
         g.tick(time.time()); g.tick(time.time() + 0.01)

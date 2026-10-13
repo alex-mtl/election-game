@@ -17,6 +17,8 @@ class Viewer:
 class BaseGame:
     name = "base"        # url slug: /<name>/
     title = "Game"
+    # settings shown in the menu dialog before the game starts: {key: [choices...]}
+    OPTIONS = {}
 
     def __init__(self, store):
         self.store = store
@@ -57,7 +59,11 @@ class BaseGame:
         pass
 
     def set_option(self, key, value):
-        """A game setting changed in the menu (e.g. guess: break between rounds)."""
+        """A game setting changed in the menu dialog."""
+
+    def get_options(self):
+        """Current values of OPTIONS."""
+        return {}
 
     def set_lang(self, lang):
         """Interface/word language changed in the menu."""

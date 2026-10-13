@@ -45,6 +45,10 @@ def load_indexes(assets_dir):
     return out
 
 
+def now_past(t):
+    return time.time() >= t
+
+
 def temperature(rank):
     for bound, label in zip(config.TEMPERATURE_BOUNDS, TEMPS):
         if rank <= bound:
@@ -59,6 +63,8 @@ def temp_key(label):
 class GuessGame(BaseGame):
     name = "guess"
     title = "Guess the Word"
+    OPTIONS = {"pause": [0, 10, 30, 60, 120],      # break between rounds, seconds (incl. the winner card)
+               "round_min": [10, 20, 30]}          # round length, minutes
     STATE = "guess/state.json"
     USED = "guess/used_words.json"
     ROUNDS = "guess/rounds.json"
@@ -71,7 +77,9 @@ class GuessGame(BaseGame):
             print("[guess]", self.error)
         self.lang = config.LANGUAGE if config.LANGUAGE in self.sems else next(iter(self.sems), "en")
         self.round_lang = self.lang                  # language of the round being played
-        self.round_break = config.ROUND_BREAK        # pause (results + promo) between rounds
+        # break between rounds (winner card + results + promo) and round length; set in the menu
+        self.pause_sec = (config.WINNER_SEC + config.REVEAL_SEC) if config.ROUND_BREAK else 0
+        self.round_sec = config.ROUND_DURATION
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
         if isinstance(used, list):                   # old format: English only
@@ -125,7 +133,7 @@ class GuessGame(BaseGame):
 
     def _start_playing(self, now):
         self.phase = PLAYING
-        dur = config.SPEED_ROUND_DURATION if self.round_type == "speed" else config.ROUND_DURATION
+        dur = config.SPEED_ROUND_DURATION if self.round_type == "speed" else self.round_sec
         self.started_at, self.ends_at = now, now + dur
         self.emit("round_start", round=self.round_id, roundType=self.round_type, duration=dur)
 
@@ -394,11 +402,25 @@ class GuessGame(BaseGame):
         self.dirty = True
 
     def set_option(self, key, value):
-        if key == "break":
-            self.round_break = bool(value)
-            if not self.round_break and self.phase == REVEAL:   # switched off during a break
-                self.phase = FINISHED
-            self.dirty = True
+        if key == "break":                               # old on/off switch
+            key, value = "pause", (config.WINNER_SEC + config.REVEAL_SEC) if value else 0
+        if key == "pause":
+            self.pause_sec = max(0, int(value))
+            if self.phase == REVEAL and now_past(self.finished_at + self.pause_sec):
+                self.phase = FINISHED                    # shortened during a break
+            elif self.phase == REVEAL:
+                self.phase_until = self.finished_at + self.pause_sec
+        elif key == "round_min":
+            self.round_sec = max(60, int(value) * 60)    # from the next round
+        self.dirty = True
+
+    def get_options(self):
+        return {"pause": self.pause_sec, "round_min": self.round_sec // 60}
+
+    @property
+    def reveal_sec(self):
+        """Part of the break after the winner card: results, then promo."""
+        return max(0, self.pause_sec - config.WINNER_SEC)
 
     @property
     def sem(self):
@@ -441,12 +463,12 @@ class GuessGame(BaseGame):
                 if best > 300:
                     self.give_hint("auto", now)
         elif self.phase == WINNER and now >= self.phase_until:
-            if not self.round_break:                     # non-stop: winner card, then next round
+            if not self.reveal_sec:                      # no break: winner card, then next round
                 self.phase = FINISHED
                 self.dirty = True
                 return
             self.phase = REVEAL
-            self.phase_until = now + config.REVEAL_SEC
+            self.phase_until = now + self.reveal_sec
             self.emit("reveal", word=self.secret.upper())
         elif self.phase == REVEAL and now >= self.phase_until:
             self.phase = FINISHED
@@ -578,7 +600,7 @@ class GuessGame(BaseGame):
             "vocabSize": self.sem.size if self.sem else 0,
             "temps": dict(zip(TEMPS, config.TEMPERATURE_BOUNDS + [None])),
             "subscribersOnly": config.SUBSCRIBERS_ONLY,
-            "breakSec": config.REVEAL_SEC, "resultsSec": config.RESULTS_SEC,
+            "breakSec": self.reveal_sec, "resultsSec": min(config.RESULTS_SEC, self.reveal_sec),
             "promo": config.PROMO_LINES_RU if self.lang == "ru" else config.PROMO_LINES,
             "lang": self.round_lang, "languages": sorted(self.sems),
             "goal": {"label": config.GOAL_LABEL, "value": self.stats.follows,

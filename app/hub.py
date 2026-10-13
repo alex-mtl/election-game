@@ -23,10 +23,14 @@ class Hub:
         self.room_id = s.get("room_id") or (store.load("state.json") or {}).get("room_id")
         self.active = s.get("active") if s.get("active") in self.games else config.DEFAULT_GAME
         self.lang = s.get("lang") or config.LANGUAGE
-        self.options = {"break": config.ROUND_BREAK, **s.get("options", {})}   # menu switches
-        for g in self.games.values():
-            for k, v in self.options.items():
-                g.set_option(k, v)
+        # per-game settings from the menu dialog: {game: {key: value}}
+        saved = s.get("options", {})
+        if "break" in saved:                          # old single on/off switch for guess
+            saved = {"guess": {"break": saved.pop("break")}, **saved}
+        for name, opts in saved.items():
+            if name in self.games and isinstance(opts, dict):
+                for k, v in opts.items():
+                    self.games[name].set_option(k, v)
         for g in self.games.values():
             g.set_lang(self.lang)
         self.clients = set()                      # websockets
@@ -45,7 +49,8 @@ class Hub:
         return self.games[self.active]
 
     def menu(self):
-        return [{"name": g.name, "title": g.title} for g in self.games.values()]
+        return [{"name": g.name, "title": g.title, "options": g.OPTIONS, "values": g.get_options()}
+                for g in self.games.values()]
 
     def set_active(self, name):
         if name not in self.games or name == self.active:
@@ -70,14 +75,21 @@ class Hub:
 
     def save_session(self):
         self.store.save(self.SESSION, {"room_id": self.room_id, "active": self.active, "lang": self.lang,
-                                       "options": self.options})
+                                       "options": self.options()})
 
-    def set_option(self, key, value):
-        self.options[key] = value
-        for g in self.games.values():
-            g.set_option(key, value)
+    def options(self):
+        return {n: g.get_options() for n, g in self.games.items() if g.OPTIONS}
+
+    def set_options(self, name, opts):
+        g = self.games.get(name)
+        if not g:
+            return
+        for k, v in (opts or {}).items():
+            if k in g.OPTIONS and v in g.OPTIONS[k]:
+                g.set_option(k, v)
+        g.dirty = True
         self.save_session()
-        print(f"[hub] option {key} -> {value}")
+        print(f"[hub] {name} settings -> {g.get_options()}")
 
     # ---- TikTok -> active game ----
     def new_live(self, room_id):
