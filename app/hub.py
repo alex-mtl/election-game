@@ -11,6 +11,7 @@ from . import config
 from .games import GAMES
 from .games.base import Viewer
 from .reactions.balloons import LIKES_CMD, LikeBalloons
+from .settings import GlobalSettings
 
 
 class Hub:
@@ -24,7 +25,10 @@ class Hub:
         self.active = s.get("active") if s.get("active") in self.games else config.DEFAULT_GAME
         self.lang = s.get("lang") or config.LANGUAGE
         # per-game settings from the menu dialog: {game: {key: value}}
+        self.global_settings = GlobalSettings()
         saved = s.get("options", {})
+        for k, v in (saved.pop("global", None) or {}).items():
+            self.global_settings.set(k, v)
         if "break" in saved:                          # old single on/off switch for guess
             saved = {"guess": {"break": saved.pop("break")}, **saved}
         for name, opts in saved.items():
@@ -78,9 +82,18 @@ class Hub:
                                        "options": self.options()})
 
     def options(self):
-        return {n: g.get_options() for n, g in self.games.items() if g.OPTIONS}
+        out = {n: g.get_options() for n, g in self.games.items() if g.OPTIONS}
+        out["global"] = self.global_settings.values()
+        return out
 
     def set_options(self, name, opts):
+        if name == "global":
+            for k, v in (opts or {}).items():
+                self.global_settings.set(k, v)
+            self.save_session()
+            self.game.dirty = True                    # pages get the new voice rate etc.
+            print(f"[hub] global settings -> {self.global_settings.values()}")
+            return
         g = self.games.get(name)
         if not g:
             return

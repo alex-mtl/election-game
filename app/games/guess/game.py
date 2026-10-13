@@ -64,7 +64,9 @@ class GuessGame(BaseGame):
     name = "guess"
     title = "Guess the Word"
     OPTIONS = {"pause": [0, 10, 30, 60, 120],      # break between rounds, seconds (incl. the winner card)
-               "round_min": [10, 20, 30]}          # round length, minutes
+               "round_min": [10, 20, 30],          # round length, minutes
+               "follow": [1, 0],                   # only followers can play / win
+               "grace": [15, 30, 60]}              # seconds a non-follower gets to follow
     STATE = "guess/state.json"
     USED = "guess/used_words.json"
     ROUNDS = "guess/rounds.json"
@@ -80,6 +82,8 @@ class GuessGame(BaseGame):
         # break between rounds (winner card + results + promo) and round length; set in the menu
         self.pause_sec = (config.WINNER_SEC + config.REVEAL_SEC) if config.ROUND_BREAK else 0
         self.round_sec = config.ROUND_DURATION
+        self.follow_required = config.FOLLOW_REQUIRED    # only followers can play (menu setting)
+        self.follow_grace = int(config.FOLLOW_GRACE_SEC)
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
         if isinstance(used, list):                   # old format: English only
@@ -236,10 +240,10 @@ class GuessGame(BaseGame):
                 print(f"[guess] rejected (not following) {viewer.name}: {word}")
                 return
             if not p.pending_until:
-                p.pending_until = now + config.FOLLOW_GRACE_SEC
+                p.pending_until = now + self.follow_grace
                 self.emit("follow_needed", name=p.name, avatar=p.avatar, dq=False,
-                          seconds=config.FOLLOW_GRACE_SEC)
-                print(f"[guess] {viewer.name} is not following: {config.FOLLOW_GRACE_SEC:.0f}s to follow")
+                          seconds=self.follow_grace)
+                print(f"[guess] {viewer.name} is not following: {self.follow_grace}s to follow")
         elif viewer.follows > 0 and (p.pending_until or p.dq):
             self._confirm(p, now)                        # their newer comments show them following
         if word in p.words:
@@ -306,7 +310,7 @@ class GuessGame(BaseGame):
                       key=lambda p: (p.best, p.best_t))
 
     def _needs_follow(self, viewer):
-        return (config.FOLLOW_REQUIRED and viewer.follows == 0
+        return (self.follow_required and viewer.follows == 0
                 and viewer.id.lower() != config.TIKTOK_USERNAME.lower())
 
     def _confirm(self, p, now):
@@ -416,10 +420,15 @@ class GuessGame(BaseGame):
                 self.phase_until = self.finished_at + self.pause_sec
         elif key == "round_min":
             self.round_sec = max(60, int(value) * 60)    # from the next round
+        elif key == "follow":
+            self.follow_required = bool(value)
+        elif key == "grace":
+            self.follow_grace = int(value)
         self.dirty = True
 
     def get_options(self):
-        return {"pause": self.pause_sec, "round_min": self.round_sec // 60}
+        return {"pause": self.pause_sec, "round_min": self.round_sec // 60,
+                "follow": int(self.follow_required), "grace": int(self.follow_grace)}
 
     @property
     def reveal_sec(self):

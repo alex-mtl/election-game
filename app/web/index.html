@@ -48,6 +48,8 @@
   #feed .ft { font: 900 calc(var(--u) * 3.2) var(--font-display); color: var(--cyan); letter-spacing: .15em; margin-bottom: .4em; }
   .fl { font-size: calc(var(--u) * 3.6); font-weight: 700; padding: .2em 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .fl.gift { color: var(--gold); }
+  .gset { font: 800 calc(var(--u) * 3.4) var(--font-display); padding: .5em 1.1em; border-radius: 999px; cursor: pointer;
+          background: transparent; color: var(--cyan); border: 1px solid var(--cyan); }
   .setup { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
            background: rgba(5, 0, 14, .82); padding: calc(var(--u) * 5); }
   .setup[hidden] { display: none; }
@@ -82,6 +84,7 @@
         <button id="setStart" class="sbtn go" data-i18n="set.start">▶ START</button></div>
     </div>
   </div>
+  <button class="gset" id="gset" data-i18n="set.global.open">⚙ GENERAL SETTINGS</button>
   <div class="games" id="games"></div>
   <button class="alerts" id="alerts" data-i18n="alert.off">🔕 STREAM ALERTS: OFF</button>
   <div id="feed" class="panel" hidden><div class="ft" data-i18n="alert.feed">LIVE CHAT</div><div id="feedList"></div></div>
@@ -111,14 +114,20 @@ function render() {
 // ---------- game settings dialog (each game describes its options; see OPTIONS on the server) ----------
 const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
                                          body: JSON.stringify(body) });
-const optLabel = (key, v) => t('set.' + key + '.v', { n: v });
+// option labels: on/off switches are [1, 0]; "0" of some options has its own word ("no break", "off")
+const optLabel = (key, v, choices) => {
+  if (choices.length === 2 && choices.includes(1) && choices.includes(0)) return t(v ? 'set.on' : 'set.off');
+  if (v === 0 && I18N.t('set.' + key + '.none') !== 'set.' + key + '.none') return t('set.' + key + '.none');
+  return t('set.' + key + '.v', { n: v });
+};
 async function startGame(g, options) {
   if (options) await post('/api/settings', { game: g.name, options });
   await post('/api/active', { game: g.name });
   location.href = '/' + g.name + '/' + location.search;
 }
-function openSetup(g) {
-  document.getElementById('setTitle').textContent = '⚙ ' + t('game.' + g.name);
+function openSetup(g, onSave) {
+  document.getElementById('setTitle').textContent = '⚙ ' + t(g.name === 'global' ? 'set.global' : 'game.' + g.name);
+  document.getElementById('setStart').textContent = t(onSave ? 'set.save' : 'set.start');
   const box = document.getElementById('setFields');
   box.replaceChildren();
   Object.entries(g.options).forEach(([key, choices]) => {
@@ -127,7 +136,7 @@ function openSetup(g) {
     const sel = document.createElement('select'); sel.dataset.key = key;
     choices.forEach(v => {
       const o = document.createElement('option');
-      o.value = v; o.textContent = v === 0 && key === 'pause' ? t('set.pause.none') : optLabel(key, v);
+      o.value = v; o.textContent = optLabel(key, v, choices);
       if ((g.values || {})[key] === v) o.selected = true;
       sel.appendChild(o);
     });
@@ -140,9 +149,13 @@ function openSetup(g) {
   document.getElementById('setStart').onclick = () => {
     const options = {};
     box.querySelectorAll('select').forEach(s => { options[s.dataset.key] = Number(s.value); });
-    startGame(g, options);
+    if (onSave) onSave(options); else startGame(g, options);
   };
 }
+// general settings (all games): likes, plane, voice, greetings - saved without starting anything
+document.getElementById('gset').onclick = () => openSetup(
+  { name: 'global', options: state.global.options, values: state.global.values },
+  async options => { await post('/api/settings', { game: 'global', options }); document.getElementById('setup').hidden = true; load(); });
 document.querySelectorAll('.langs button[data-lang]').forEach(b => b.onclick = async () => {
   await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' },
                                  body: JSON.stringify({ lang: b.dataset.lang }) });

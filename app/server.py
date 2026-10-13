@@ -58,12 +58,13 @@ def create_app(hub):
     @app.get("/api/games")
     def games():
         return {"active": hub.active, "games": hub.menu(), "lang": hub.lang,
-                "languages": config.LANGUAGES, "options": hub.options()}
+                "languages": config.LANGUAGES, "options": hub.options(),
+                "global": {"options": hub.global_settings.schema(), "values": hub.global_settings.values()}}
 
     @app.post("/api/settings")
     async def settings(req: Request):
         body = await req.json()
-        if body.get("game") in hub.games:
+        if body.get("game") in hub.games or body.get("game") == "global":
             hub.set_options(body["game"], body.get("options") or {})
         if "lang" in body:
             if body["lang"] not in config.LANGUAGES:
