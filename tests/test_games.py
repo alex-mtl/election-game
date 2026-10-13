@@ -200,6 +200,16 @@ class GiftHintTest(unittest.TestCase):
             self.assertLess(r, best)                           # every paid hint is closer
             best = min(best, r)
 
+    def test_gift_hint_after_second_best_wins(self):
+        config.GIFT_HINT_NAMES = ["rose"]
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        g.on_comment(Viewer("ann", "Ann", "", 1), g.sem.words[int(g.order[1])])   # the #2 word
+        g.on_gift(Viewer("bob", "Bob", "", 1), "Rose", 1)
+        self.assertEqual(g.hints[-1]["word"].lower(), g.secret)                  # only the secret is closer
+        self.assertEqual(g.phase, guess_mod.WINNER)
+        self.assertEqual(g.exact_order[0], "bob")                                # the gifter wins
+
 
 class FollowTest(GuessTest):
     def nf(self, name):

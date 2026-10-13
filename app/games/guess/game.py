@@ -344,10 +344,13 @@ class GuessGame(BaseGame):
             return None
         if viewer is None and now - self.last_hint_t < config.HINT_COOLDOWN_SEC:
             return None
-        h = None
         if viewer is not None:
-            h = hints.semantic(self, sum(1 for x in self.hints if x["type"] == "semantic"))
-        h = h or hints.make_hint(self, config.HINT_TYPES)
+            # a paid hint is always closer than the best guess; if only the secret is closer
+            # (best is #2), the hint IS the secret and the gifter wins
+            h = hints.semantic(self, sum(1 for x in self.hints if x["type"] == "semantic")) or \
+                {"type": "semantic", "text": "A word close to the secret word is:", "word": self.secret.upper()}
+        else:
+            h = hints.make_hint(self, config.HINT_TYPES)
         if not h:
             return None
         h["by"] = source
