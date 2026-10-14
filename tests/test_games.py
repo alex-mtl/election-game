@@ -420,6 +420,31 @@ class GlobalSettingsTest(unittest.TestCase):
             config.PLANE_AUTO_LIKES, config.GREET_JOINS, config.VOICE_RATE = saved
 
 
+class BomberTest(unittest.TestCase):
+    def test_bomber_from_10000_likes(self):
+        from app.reactions.balloons import LikeBalloons
+        saved = config.PLANE_BOMBER_LIKES, config.PLANE_AUTO_LIKES
+        try:
+            config.PLANE_BOMBER_LIKES, config.PLANE_AUTO_LIKES = 10000, 1000
+            lb = LikeBalloons(JsonStore(tempfile.mkdtemp()))
+            m = Viewer("mik", "Mik", "", 1)
+            planes = []
+            for _ in range(100):                        # 100 x 100 likes = 10 000
+                before = lb.total_of(m.id)
+                lb.on_like(m, 100)
+                p = lb.auto_plane(m, before)
+                if p:
+                    planes.append(p)
+            self.assertEqual(len(planes), 10)
+            self.assertEqual([p["bomber"] for p in planes], [False] * 9 + [True])   # the 10th one
+            config.PLANE_BOMBER_LIKES = 0                                        # off
+            lb.likes[m.id]["plane_t"] = 0                                        # past the cooldown
+            plane, _ = lb.likes_command(m)
+            self.assertFalse(plane["bomber"])
+        finally:
+            config.PLANE_BOMBER_LIKES, config.PLANE_AUTO_LIKES = saved
+
+
 class BattleTest(unittest.TestCase):
     def test_cooldowns_and_join(self):
         b = BattleGame(JsonStore(tempfile.mkdtemp()))

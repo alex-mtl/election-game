@@ -13,6 +13,7 @@ class GlobalSettings:
         "plane_auto": ("PLANE_AUTO_LIKES", [0, 500, 1000, 2000, 5000]),
         "plane_min": ("PLANE_MIN_LIKES", [0, 20, 50, 100]),
         "plane_cooldown": ("PLANE_COOLDOWN_SEC", [30, 60, 120, 300]),
+        "bomber": ("PLANE_BOMBER_LIKES", [0, 5000, 10000, 20000]),
         "voice_rate": ("VOICE_RATE", [1, 1.25, 1.5, 1.75, 2]),
         "greet": ("GREET_JOINS", [1, 0]),
     }

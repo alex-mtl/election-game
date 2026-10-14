@@ -51,6 +51,60 @@ window.AudioKit = (() => {
     s.start(t0, Math.random() * buf.duration);                                   // a different bit each time
     s.stop(end + 0.05);
   }
+  // ---------- "party": a rich party-popper pop + a magic chime (butterflies from the bomber plane)
+  // layered: crack + low thump + confetti rustle, then an ascending bell arpeggio with an octave
+  // overtone and a detuned twin per note (shimmer), spread in stereo and sent to a soft reverb
+  let reverb = null;
+  function room() {
+    if (reverb) return reverb;
+    const len = ctx.sampleRate * 1.8, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = ir.getChannelData(c);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+    }
+    const conv = ctx.createConvolver(), wet = ctx.createGain();
+    conv.buffer = ir; wet.gain.value = 0.35;
+    conv.connect(wet).connect(ctx.destination);
+    reverb = conv;
+    return reverb;
+  }
+  function party(pan = 0, vol = 0.5) {
+    if (!ctx || muted) return;
+    const t0 = ctx.currentTime + 0.01, out = ctx.createGain(), p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    out.gain.value = vol;
+    if (p) { p.pan.value = Math.max(-0.8, Math.min(0.8, pan)); out.connect(p).connect(ctx.destination); }
+    else out.connect(ctx.destination);
+    out.connect(room());
+    const burst = (dur, type, freq, q, v, at = 0) => {         // filtered noise burst
+      const b = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      f.type = type; f.frequency.value = freq; f.Q.value = q;
+      g.gain.setValueAtTime(v, t0 + at); g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
+      s.buffer = b; s.connect(f).connect(g).connect(out); s.start(t0 + at);
+    };
+    burst(0.05, 'highpass', 1400, 0.7, 0.9);                    // crack of the popper
+    burst(0.12, 'bandpass', 2600, 1.2, 0.5);
+    const th = ctx.createOscillator(), tg = ctx.createGain();   // low "puff"
+    th.frequency.setValueAtTime(170, t0); th.frequency.exponentialRampToValueAtTime(55, t0 + 0.12);
+    tg.gain.setValueAtTime(0.7, t0); tg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+    th.connect(tg).connect(out); th.start(t0); th.stop(t0 + 0.2);
+    for (let i = 0; i < 6; i++) burst(0.05, 'bandpass', 5000 + Math.random() * 4000, 3, 0.06, 0.05 + i * 0.05 + Math.random() * 0.03);  // confetti
+    // magic chime: major pentatonic run upwards from a random key
+    const base = 1046.5 * Math.pow(2, Math.floor(Math.random() * 5) / 12), steps = [0, 4, 7, 9, 12, 16, 19];
+    steps.forEach((st, i) => {
+      const at = t0 + 0.07 + i * 0.065, f = base * Math.pow(2, st / 12), np = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.16, at + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.9);
+      if (np) { np.pan.value = Math.max(-1, Math.min(1, pan + (i % 2 ? 0.35 : -0.35))); g.connect(np).connect(out); } else g.connect(out);
+      [[f, 'sine', 1], [f * 1.004, 'sine', 0.6], [f * 2, 'triangle', 0.25], [f * 3.01, 'sine', 0.08]].forEach(([fr, ty, v]) => {
+        const o = ctx.createOscillator(), og = ctx.createGain();
+        o.type = ty; o.frequency.value = fr; og.gain.value = v;
+        o.connect(og).connect(g); o.start(at); o.stop(at + 1);
+      });
+    });
+  }
   function noise(delay, dur, vol, hp) {
     if (!ctx || muted) return;
     const t0 = ctx.currentTime + (delay || 0);
@@ -157,7 +211,7 @@ window.AudioKit = (() => {
   }
 
   return {
-    tone, noise, loop, say, mount, enable, setLang, setRate,
+    tone, noise, loop, party, say, mount, enable, setLang, setRate,
     get ready() { return !!ctx && !muted; },
     get speaking() { return !!synth && (synth.speaking || synth.pending); },
     get running() { return !!ctx && ctx.state === 'running'; },      // browser actually allows sound

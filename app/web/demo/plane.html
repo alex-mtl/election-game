@@ -18,6 +18,8 @@
   <button id="fly">✈ fly now</button>
   <button id="ru">RU</button><button id="en">EN</button>
   <button id="snd">🔊 sound</button>
+  <button id="bomb">💣 bomber (10 000 likes)</button>
+  <button id="party">🎉 popper + chime</button>
 </div>
 <script src="/common/i18n.js"></script>
 <script src="/common/audio.js"></script>
@@ -33,6 +35,9 @@
   let i = 0, sound = false;
   const go = () => Plane.fly(people[i++ % people.length], { sound });
   document.getElementById('fly').onclick = go;
+  document.getElementById('party').onclick = () => { AudioKit.enable(); AudioKit.party((Math.random() * 2 - 1) * 0.6); };
+  document.getElementById('bomb').onclick = () =>
+    Plane.fly({ name: 'Mikaniri', avatar: '', total: 10000, bomber: true }, { sound });
   document.getElementById('ru').onclick = () => { location.search = '?lang=ru'; };
   document.getElementById('en').onclick = () => { location.search = '?lang=en'; };
   const snd = document.getElementById('snd');                     // off by default, the button toggles it
