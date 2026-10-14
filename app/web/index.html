@@ -168,8 +168,27 @@ async function load() {
   I18N.set(state.lang);
   I18N.apply();
   render();
+  fit();
 }
 load();
+
+// The menu is sized in --u (a 9:16 unit); in a window where it doesn't fit, shrink every size
+// in proportion so it fits without scrolling. The live chat feed below may still scroll.
+let fitK = 1;
+function fit() {
+  const root = document.documentElement, feed = document.getElementById('feed');
+  fitK = 1;                                          // from scratch: language, window, alerts
+  for (let i = 0; i < 4; i++) {
+    root.style.setProperty('--u', `calc(min(1vw, 0.5625vh) * ${fitK})`);
+    const extra = feed.hidden ? 0 : feed.offsetHeight + parseFloat(getComputedStyle(document.body).rowGap || 0);
+    const need = document.body.scrollHeight - extra, have = window.innerHeight;
+    const k = Math.min(1, fitK * have / need);
+    if (Math.abs(k - fitK) < 0.005) break;
+    fitK = need > have ? k * 0.99 : Math.min(1, k);
+  }
+}
+window.addEventListener('resize', fit);
+if (document.fonts) document.fonts.ready.then(fit);
 
 // ---------- stream alerts (only on the menu page) ----------
 // comment -> phone ring + the comment read aloud; gift -> church bell + the gifter's name
