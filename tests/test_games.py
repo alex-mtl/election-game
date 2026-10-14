@@ -421,7 +421,7 @@ class GlobalSettingsTest(unittest.TestCase):
 
 
 class BomberTest(unittest.TestCase):
-    def test_bomber_from_10000_likes(self):
+    def test_bomber_every_10000_likes(self):
         from app.reactions.balloons import LikeBalloons
         saved = config.PLANE_BOMBER_LIKES, config.PLANE_AUTO_LIKES
         try:
@@ -429,18 +429,17 @@ class BomberTest(unittest.TestCase):
             lb = LikeBalloons(JsonStore(tempfile.mkdtemp()))
             m = Viewer("mik", "Mik", "", 1)
             planes = []
-            for _ in range(100):                        # 100 x 100 likes = 10 000
+            for _ in range(250):                        # 250 x 100 likes = 25 000
                 before = lb.total_of(m.id)
                 lb.on_like(m, 100)
                 p = lb.auto_plane(m, before)
                 if p:
                     planes.append(p)
-            self.assertEqual(len(planes), 10)
-            self.assertEqual([p["bomber"] for p in planes], [False] * 9 + [True])   # the 10th one
-            config.PLANE_BOMBER_LIKES = 0                                        # off
+            self.assertEqual(len(planes), 25)
+            self.assertEqual([i + 1 for i, p in enumerate(planes) if p["bomber"]], [10, 20])   # 10 000, 20 000
             lb.likes[m.id]["plane_t"] = 0                                        # past the cooldown
             plane, _ = lb.likes_command(m)
-            self.assertFalse(plane["bomber"])
+            self.assertFalse(plane.get("bomber"))                                # "!likes!": a plain plane
         finally:
             config.PLANE_BOMBER_LIKES, config.PLANE_AUTO_LIKES = saved
 

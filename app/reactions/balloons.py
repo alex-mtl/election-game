@@ -14,10 +14,11 @@ INFLATE_VISIBLE_SEC = 25   # a balloon stays there this long after the viewer's 
 
 
 
-def bomber(total):
-    """From PLANE_BOMBER_LIKES likes this stream (the 10th auto plane) the plane drops bombs that
-    turn into butterflies with the viewer's avatar."""
-    return bool(config.PLANE_BOMBER_LIKES) and total >= config.PLANE_BOMBER_LIKES
+def bomber(total, before):
+    """The plane that marks every new PLANE_BOMBER_LIKES likes this stream (10 000, 20 000, ...)
+    drops bombs that turn into butterflies with the viewer's avatar."""
+    step = config.PLANE_BOMBER_LIKES
+    return bool(step) and total // step > before // step
 
 class LikeBalloons:
     FILE = "balloons.json"
@@ -62,8 +63,7 @@ class LikeBalloons:
             return {"deny": "cooldown", "wait": wait}, f"cooldown {wait}s"
         u["plane_t"], u["plane_likes"] = now, total
         u["name"], u["avatar"] = viewer.name, viewer.avatar or u["avatar"]
-        return {"id": viewer.id, "name": u["name"], "avatar": u["avatar"], "total": total,
-                "bomber": bomber(total)}, "ok"
+        return {"id": viewer.id, "name": u["name"], "avatar": u["avatar"], "total": total}, "ok"
 
     def total_of(self, viewer_id):
         u = self.likes.get(viewer_id)
@@ -77,7 +77,7 @@ class LikeBalloons:
             return None
         u["plane_t"], u["plane_likes"] = time.time(), u["total"]   # counts as a "!likes!" use too
         return {"id": viewer.id, "name": u["name"], "avatar": u["avatar"], "total": u["total"], "auto": True,
-                "bomber": bomber(u["total"])}
+                "bomber": bomber(u["total"], before)}
 
     def new_session(self):
         self.likes = {}
