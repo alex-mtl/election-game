@@ -1,7 +1,9 @@
 /* Guess the Word overlay, 9:16. --u = 1% of the stage width. Colors live in /common/neon.css. */
 body { display: flex; justify-content: center; }
-#stage { position: relative; width: calc(var(--u) * 100); height: calc(var(--u) * 177.7);
-         display: flex; flex-direction: column; gap: calc(var(--u) * 2); padding: calc(var(--u) * 3);
+/* the whole window, edge to edge (it is a layer over the TikTok video); sizes still follow --u */
+#stage { position: relative; width: 100vw; height: 100vh;
+         display: flex; flex-direction: column; gap: calc(var(--u) * 2);
+         padding: calc(var(--u) * 3) calc(var(--u) * 1.2);
          font-size: calc(var(--u) * 4); overflow: hidden; }
 .title { font: 900 calc(var(--u) * 3.6) var(--font-display); letter-spacing: .14em;
          margin-bottom: calc(var(--u) * 1.6); }
