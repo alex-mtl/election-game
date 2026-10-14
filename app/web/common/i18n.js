@@ -54,6 +54,7 @@ window.I18N = (() => {
       'b.v.round': 'Round {n}. Go!', 'b.team.red': 'Red', 'b.team.yellow': 'Yellow',
       // ---------- guess ----------
       'g.round': 'ROUND {n}', 'g.speed': ' · SPEED', 'g.secret': 'SECRET WORD', 'g.hunters': 'TOP HUNTERS',
+      'g.tk.word': "Last round's word: {w}", 'g.tk.none': '(nobody found it)', 'g.tk.top': 'Stream top:',
       'g.best': 'BEST GUESSES', 'g.cta': 'TYPE ONE WORD IN CHAT', 'g.subs': '🔒 SUBSCRIBERS ONLY',
       'g.hint': '💡 HINT', 'g.noHunters': 'No hunters yet — be the first!',
       'g.noGuesses': 'Type a word in chat to start hunting!', 'g.badgeNew': 'NEW', 'g.badgeUnknown': 'UNKNOWN',
@@ -146,6 +147,7 @@ window.I18N = (() => {
       'b.v.sum': '{team}: плюс {pts}', 'b.v.win': '{team} побеждают!', 'b.v.mvp': ' Лучший игрок — {name}!',
       'b.v.round': 'Раунд {n}. Поехали!', 'b.team.red': 'Красные', 'b.team.yellow': 'Жёлтые',
       'g.round': 'РАУНД {n}', 'g.speed': ' · БЫСТРЫЙ', 'g.secret': 'СЕКРЕТНОЕ СЛОВО', 'g.hunters': 'ЛУЧШИЕ ОХОТНИКИ',
+      'g.tk.word': 'Слово прошлого раунда: {w}', 'g.tk.none': '(никто не угадал)', 'g.tk.top': 'Топ стрима:',
       'g.best': 'ЛУЧШИЕ ДОГАДКИ', 'g.cta': 'ПИШИ В ЧАТ ОДНО СЛОВО', 'g.subs': '🔒 ТОЛЬКО ДЛЯ ПОДПИСЧИКОВ',
       'g.hint': '💡 ПОДСКАЗКА', 'g.noHunters': 'Охотников пока нет — будь первым!',
       'g.noGuesses': 'Напиши слово в чат, чтобы начать охоту!', 'g.badgeNew': 'НОВОЕ', 'g.badgeUnknown': 'НЕИЗВЕСТНО',

@@ -193,7 +193,8 @@ class GuessGame(BaseGame):
             "round": self.round_id, "type": self.round_type, "tier": self.tier,
             "word": self.secret, "reason": reason, "winner": player.name if player else None,
             "seconds": round(now - self.started_at), "players": len(self.players),
-            "guesses": sum(p.guesses for p in self.players.values()), "at": int(now)}])[-300:]
+            "guesses": sum(p.guesses for p in self.players.values()), "at": int(now),
+            "podium": [p["name"] for p in self.podium]}])[-300:]
         self.store.save(self.ROUNDS, self.history)
         print(f"[guess] round {self.round_id} {reason}: word={self.secret} "
               f"winner={player.name if player else '-'}")
@@ -653,6 +654,7 @@ class GuessGame(BaseGame):
                       "top100": sum(1 for p in players if p.best <= 100),
                       "guesses": sum(p.guesses for p in self.players.values())},
             "streamLeaderboard": self.stats.leaderboard(),
+            "lastRound": self.history[-1] if self.history else None,    # for the ticker
             "streak": self.stats.top_streak(),
             "vocabSize": self.sem.size if self.sem else 0,
             "temps": dict(zip(TEMPS, config.TEMPERATURE_BOUNDS + [None])),

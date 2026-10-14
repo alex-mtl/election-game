@@ -459,10 +459,51 @@
     $('reveal').hidden = s.phase !== 'reveal';
     if (s.phase === 'winner') renderWinner(s);
     if (s.phase === 'reveal') renderReveal(s);
+    if (s.phase === 'playing') tickerFor(s);
     if (s.phase === 'countdown') {               // new round: forget everything from the last one
       prevWords = new Map(); prevHunters = new Map(); fresh = []; queue.length = 0;
       $('miniToasts').replaceChildren();
     }
+  }
+
+  // ------------------------------------------------------------ ticker at the CTA line
+  // At the start of a round, and again 1 and 2 minutes in: the last round's word, its podium,
+  // and the stream's top by wins.
+  let tickerRound = null, tickerTimers = [];
+  const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function tickerText(s) {
+    const parts = [], lr = s.lastRound;
+    if (lr && lr.word) {
+      parts.push(t('g.tk.word', { w: '<b>' + esc(lr.word.toUpperCase()) + '</b>' })
+                 + (lr.reason === 'exact' ? '' : ' ' + t('g.tk.none')));
+      (lr.podium || []).slice(0, 3).forEach((n, i) => parts.push(['🥇', '🥈', '🥉'][i] + ' ' + esc(n)));
+    }
+    const top = (s.streamLeaderboard || []).filter(r => r.wins > 0).slice(0, 5);
+    if (top.length) parts.push('🏆 ' + t('g.tk.top') + ' ' +
+      top.map(r => esc(r.name) + ' — ' + I18N.n(r.wins, 'win')).join(' · '));
+    return parts.join('   ·   ');
+  }
+  function runTicker() {
+    const html = S && tickerText(S), box = $('ticker');
+    if (!html || S.phase !== 'playing') return;
+    box.replaceChildren();
+    const sp = document.createElement('span');
+    sp.innerHTML = html;
+    box.appendChild(sp);
+    const W = box.clientWidth, w = sp.scrollWidth;
+    sp.style.setProperty('--from', W + 'px');
+    sp.style.setProperty('--to', -w + 'px');
+    sp.style.setProperty('--dur', ((W + w) / Math.max(120, W / 7)).toFixed(1) + 's');   // ~7 s per screen width
+    $('bottom').classList.add('ticking');
+    sp.addEventListener('animationend', () => { sp.remove(); $('bottom').classList.remove('ticking'); });
+  }
+  function tickerFor(s) {
+    if (s.roundId === tickerRound) return;
+    tickerRound = s.roundId;
+    tickerTimers.forEach(clearTimeout);
+    const since = Live.now() - s.startedAt;               // a reload mid-round keeps the schedule
+    tickerTimers = [0, 60, 120].filter(at => at - since > -10)
+      .map(at => setTimeout(runTicker, Math.max(0, at - since) * 1000));
   }
 
   // ------------------------------------------------------------ clock: timer, countdown, last 10 s
