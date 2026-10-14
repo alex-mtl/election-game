@@ -1,4 +1,4 @@
-// "!likes!" plane: a little plane crosses the sky towing a waving banner with the viewer's
+// Likes plane (every 1000 likes): a little plane crosses the sky towing a waving banner with the viewer's
 // avatar and the number of likes this stream. Works on every page (games + streamer overlay).
 //   Plane.fly({name, avatar, total}, {sound: true})
 window.Plane = (() => {
@@ -286,20 +286,7 @@ window.Plane = (() => {
     if (!flying && queue.length) { const [e, o] = queue.shift(); launch(e, o); }
   }
 
-  // "!likes!" refused: a short note at the top so the viewer knows why nothing flies
-  function deny(e) {
-    setup();
-    const note = document.createElement('div');
-    note.className = 'pl-deny';
-    note.textContent = '✈ ' + clean(e.name) + ': ' + (e.deny === 'cooldown'
-      ? t('plane.wait', { s: e.wait })
-      : t('plane.need', { need: e.need, have: e.have }));
-    sky.appendChild(note);
-    setTimeout(() => note.remove(), 4200);
-  }
-
   return {
-    deny,
     fly(e, o) {                                // one plane at a time, the rest wait their turn
       setup();
       queue.push([e, o]);

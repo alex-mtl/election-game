@@ -1,13 +1,9 @@
 """Like balloons, shared by every page (games and the streamer overlay): each viewer inflates
 their own heart balloon with likes; at LIKES_PER_BALLOON it takes off with their avatar."""
 
-import re
 import time
 
 from .. import config
-
-# "!likes!" / "!лайки!" (also without the closing "!", any case)
-LIKES_CMD = re.compile(r"^\s*!\s*(likes|лайки)\s*!?\s*$", re.IGNORECASE)
 
 MAX_INFLATING = 4          # balloons shown at the bottom of the streamer overlay
 INFLATE_VISIBLE_SEC = 25   # a balloon stays there this long after the viewer's last like
@@ -48,23 +44,6 @@ class LikeBalloons:
         self.dirty = True
         return launches
 
-    def likes_command(self, viewer):
-        """'!likes!': a plane tows a banner with the viewer's likes this stream.
-        Needs > PLANE_MIN_LIKES likes; then a cooldown of PLANE_COOLDOWN_SEC that 100 new
-        likes lift early. Returns the plane event or None (and why, for the log)."""
-        now = time.time()
-        u = self.likes.get(viewer.id)
-        total = u["total"] if u else 0
-        if total <= config.PLANE_MIN_LIKES:
-            return {"deny": "likes", "have": total, "need": config.PLANE_MIN_LIKES + 1}, f"only {total} likes"
-        last_t, likes_then = u.get("plane_t", 0), u.get("plane_likes", -10**9)
-        if now - last_t < config.PLANE_COOLDOWN_SEC and total - likes_then < config.LIKES_PER_BALLOON:
-            wait = int(config.PLANE_COOLDOWN_SEC - (now - last_t)) + 1
-            return {"deny": "cooldown", "wait": wait}, f"cooldown {wait}s"
-        u["plane_t"], u["plane_likes"] = now, total
-        u["name"], u["avatar"] = viewer.name, viewer.avatar or u["avatar"]
-        return {"id": viewer.id, "name": u["name"], "avatar": u["avatar"], "total": total}, "ok"
-
     def total_of(self, viewer_id):
         u = self.likes.get(viewer_id)
         return u["total"] if u else 0
@@ -75,7 +54,6 @@ class LikeBalloons:
         u = self.likes.get(viewer.id)
         if not step or not u or u["total"] // step <= before // step:
             return None
-        u["plane_t"], u["plane_likes"] = time.time(), u["total"]   # counts as a "!likes!" use too
         return {"id": viewer.id, "name": u["name"], "avatar": u["avatar"], "total": u["total"], "auto": True,
                 "bomber": bomber(u["total"], before)}
 

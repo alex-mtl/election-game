@@ -196,7 +196,7 @@ function render(s){
 A.mount({hello: 'b.v.hello'});
 Live.start({game: 'battle', onState: render, onEvent: handleEvent,
             onFeed: e => { if (e.type === 'plane') Plane.fly(e, {sound: true});
-                           else if (e.type === 'plane_denied') Plane.deny(e); else Greeter.push(e); }});
+                           else Greeter.push(e); }});
 </script>
 </body>
 </html>

@@ -359,29 +359,15 @@ class BalloonsTest(unittest.TestCase):
         self.assertIn("balloons", hub.message("guess"))
 
 
-class PlaneTest(unittest.TestCase):
-    def test_likes_command_rules(self):
+class NoLikesCommandTest(unittest.TestCase):
+    def test_likes_command_is_gone(self):
         from app.hub import Hub
-        config.LIKES_PER_BALLOON, config.PLANE_MIN_LIKES, config.PLANE_COOLDOWN_SEC = 100, 20, 60
         hub = Hub(JsonStore(tempfile.mkdtemp()))
-        hub.set_active("guess")
         mika = Viewer("mika", "Mikaniri", "")
-        planes = lambda: [e for e in hub.feed if e["type"] == "plane"]
-        denied = lambda: [e for e in hub.feed if e["type"] == "plane_denied"]
-        hub.like(mika, 15)
+        hub.like(mika, 50)
         hub.comment(mika, "!лайки!")
-        self.assertEqual(planes(), [])                            # not more than 20 likes yet
-        self.assertEqual(denied()[-1]["deny"], "likes")
-        hub.like(mika, 10)
         hub.comment(mika, "!likes!")
-        self.assertEqual(planes()[-1]["total"], 25)               # 25 likes -> plane
-        hub.comment(mika, "!LIKES")
-        self.assertEqual(len(planes()), 1)                        # cooldown: one minute
-        self.assertEqual(denied()[-1]["deny"], "cooldown")
-        hub.like(mika, 100)
-        hub.comment(mika, "!лайки!")
-        self.assertEqual(len(planes()), 2)                        # 100 new likes lift the cooldown
-        self.assertNotIn("mika", hub.games["guess"].players)      # the command is not a guess
+        self.assertEqual([e for e in hub.feed if e["type"] in ("plane", "plane_denied")], [])
 
 
 class AutoPlaneTest(unittest.TestCase):
@@ -437,9 +423,6 @@ class BomberTest(unittest.TestCase):
                     planes.append(p)
             self.assertEqual(len(planes), 25)
             self.assertEqual([i + 1 for i, p in enumerate(planes) if p["bomber"]], [10, 20])   # 10 000, 20 000
-            lb.likes[m.id]["plane_t"] = 0                                        # past the cooldown
-            plane, _ = lb.likes_command(m)
-            self.assertFalse(plane.get("bomber"))                                # "!likes!": a plain plane
         finally:
             config.PLANE_BOMBER_LIKES, config.PLANE_AUTO_LIKES = saved
 

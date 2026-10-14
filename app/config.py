@@ -38,11 +38,9 @@ TEAM_COOLDOWN_SEC = _f("TEAM_COOLDOWN_SEC", 5)
 WIN_PAUSE_SEC = _f("WIN_PAUSE_SEC", 15)
 
 # ---- streamer overlay ----
-LIKES_PER_BALLOON = _i("LIKES_PER_BALLOON", 100)
-PLANE_MIN_LIKES = _i("PLANE_MIN_LIKES", 20)              # "!likes!" works after more than this many likes
+LIKES_PER_BALLOON = _i("LIKES_PER_BALLOON", 100)        # likes from one viewer -> their balloon takes off
 PLANE_AUTO_LIKES = _i("PLANE_AUTO_LIKES", 1000)          # the plane flies by itself at 1000, 2000, ... likes (0 = off)
 PLANE_BOMBER_LIKES = 10000      # every 10 000, 20 000, ... likes the plane drops bombs -> butterflies (0 = off; menu setting)
-PLANE_COOLDOWN_SEC = _i("PLANE_COOLDOWN_SEC", 60)        # ...then once a minute (or after 100 new likes)        # likes from one viewer -> their balloon takes off
 
 # ---- guess the word ----
 ROUND_DURATION = _i("ROUND_DURATION", 210)

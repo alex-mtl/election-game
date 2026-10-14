@@ -584,7 +584,6 @@
                onFeed: e => {
                  if (e.type === 'balloon') Balloons.launch(e);
                  else if (e.type === 'plane') Plane.fly(e, { sound: true });
-                 else if (e.type === 'plane_denied') Plane.deny(e);
                  else Greeter.push(e);
                } });
 })();
