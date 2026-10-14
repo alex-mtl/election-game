@@ -25,6 +25,8 @@ TEMPS = ["PERFECT", "BURNING", "VERY HOT", "HOT", "WARM", "COLD", "FREEZING"]
 # (max rank, level) milestones for "close guess" events, best first
 CLOSE_LEVELS = [(2, "so_close"), (3, "top3"), (10, "top10"), (50, "top50"), (100, "top100")]
 EXACT_WINDOW_SEC = 3          # exact guesses right after the winner still make the podium
+# typed alone in chat by a viewer with hint credits: spends one credit on a close-word hint
+HINT_WORDS = {"подсказка", "hint"}
 MAX_WORDS = 5000              # cap of aggregated words per round (memory guard)
 SIM_NAMES = ["Alex", "Mike", "Sarah", "John", "Emma", "Liam", "Olivia", "Noah", "Mia", "Leo"]
 
@@ -72,6 +74,7 @@ class GuessGame(BaseGame):
     STATE = "guess/state.json"
     USED = "guess/used_words.json"
     ROUNDS = "guess/rounds.json"
+    CREDITS = "guess/hint_credits.json"          # viewer id -> hint credits ("on account")
 
     def __init__(self, store):
         super().__init__(store)
@@ -93,6 +96,7 @@ class GuessGame(BaseGame):
             used = {"en": used}
         self.used = {k: set(v) for k, v in used.items()}
         self.history = store.load(self.ROUNDS, [])
+        self.credits = {k: int(v) for k, v in (store.load(self.CREDITS, {}) or {}).items() if int(v) > 0}
         self.round_id = 0
         self.difficulty = []          # (solved, seconds, best rank) of recent rounds
         self.tier = "easy"
@@ -209,6 +213,10 @@ class GuessGame(BaseGame):
         if not self.sem or self.phase not in (PLAYING, WINNER):
             return
         now = time.time()
+        # "подсказка" / "hint" (any language, any case) from a viewer with hints on account
+        if self.phase == PLAYING and self.credits.get(viewer.id, 0) > 0                 and (text or "").strip(" !.?").lower().replace("ё", "е") in HINT_WORDS                 and not (ts and ts < self.started_at - 3):
+            self.use_credit(viewer, now)
+            return
         word, raw = self.sem.normalize(text)
         if raw is not None and ts and self.phase == PLAYING and ts < self.started_at - 3:
             # typed before this round started (break / countdown) but delivered late by TikTok
@@ -379,6 +387,28 @@ class GuessGame(BaseGame):
         elif g not in config.GIFT_NEW_ROUND_NAMES and g not in config.GIFT_HINT_EXCLUDE:   # any gift
             self.give_hint(viewer.name, viewer=viewer)
 
+    # ------------------------------------------------------------------ hint credits
+    def add_credits(self, viewer_id, n=1):
+        """Put hints on a viewer's account (gift-free hints they spend with "подсказка")."""
+        viewer_id = (viewer_id or "").strip().lstrip("@").lower()
+        if not viewer_id:
+            return 0
+        left = max(0, self.credits.get(viewer_id, 0) + int(n))
+        if left:
+            self.credits[viewer_id] = left
+        else:
+            self.credits.pop(viewer_id, None)
+        self.store.save(self.CREDITS, self.credits)
+        print(f"[guess] hint credits {viewer_id}: {left}")
+        return left
+
+    def use_credit(self, viewer, now=None):
+        h = self.give_hint(viewer.name, now, viewer=viewer)
+        if h:
+            left = self.add_credits(viewer.id, -1)
+            print(f"[guess] {viewer.name} used a hint credit ({left} left)")
+        return h
+
     def on_follow(self, viewer: Viewer):
         self.stats.follows += 1
         self.emit("follow", name=viewer.name, avatar=viewer.avatar)
@@ -530,6 +560,9 @@ class GuessGame(BaseGame):
         now = time.time()
         name = (params.get("name") or "Tester")[:30]
         v = Viewer(name.lower(), name, "")
+        if action == "credit":                           # hints on account: {"id": "nick", "n": 1}
+            return {"id": params.get("id"), "credits": self.add_credits(params.get("id"), params.get("n", 1)),
+                    "all": self.credits}
         if action == "start_round":
             if self.phase == PLAYING:
                 self._finish(now, "skip")

@@ -218,6 +218,23 @@ class GiftHintTest(unittest.TestCase):
         self.assertEqual(len(g.hints), 1)
         self.assertEqual(g.hints[-1]["by"], "Eva")
 
+    def test_hint_credit(self):
+        store = JsonStore(tempfile.mkdtemp())
+        g = GuessGame(store)
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        eva = Viewer("evgenija0101", "Eva", "", 1)
+        g.on_comment(Viewer("bob", "Bob", "", 1), "ПодсКАЗКА")           # no credits: an ordinary guess
+        self.assertEqual(len(g.hints), 0)
+        self.assertEqual(g.add_credits("@Evgenija0101", 1), 1)
+        g.on_comment(eva, "ПоДсКаЗкА!")
+        self.assertEqual(len(g.hints), 1)
+        self.assertEqual(g.hints[-1]["by"], "Eva")
+        self.assertIn(g.hints[-1]["word"].lower(), g.players["evgenija0101"].words)
+        self.assertEqual(g.credits.get("evgenija0101", 0), 0)             # spent
+        self.assertEqual(GuessGame(store).credits, {})                     # saved
+        g.on_comment(eva, "подсказка")                                     # no credits left: a guess
+        self.assertEqual(len(g.hints), 1)
+
     def test_gift_hint_beats_best_guess(self):
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
         g.tick(time.time()); g.tick(time.time() + 0.01)
