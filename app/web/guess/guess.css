@@ -105,11 +105,12 @@ body { display: flex; justify-content: center; }
 #bottom { position: relative; z-index: 32; }
 #bottom.ticking #cta { visibility: hidden; }
 #ticker { position: absolute; left: calc(var(--u) * -1.2); right: calc(var(--u) * -1.2); bottom: calc(var(--u) * 7);
-          height: 1.5em; overflow: hidden; pointer-events: none; }
-#ticker span { position: absolute; left: 0; top: 0; white-space: nowrap; line-height: 1.5em; color: var(--gold);
-               text-shadow: 0 0 .25em var(--gold), 0 0 .7em rgba(255,216,74,.6);
+          height: calc(var(--u) * 7); overflow: hidden; pointer-events: none; }
+/* plain, crisp text like the table rows: no glow, no shadow (blur is hard to read on a stream) */
+#ticker span { position: absolute; left: 0; top: 0; white-space: nowrap; line-height: 1.5em; color: #fff;
+               font: 700 calc(var(--u) * 4.4) var(--font-text); letter-spacing: .02em; text-shadow: none;
                animation: tick var(--dur) linear forwards; }
-#ticker span b { color: var(--cyan); text-shadow: 0 0 .25em var(--cyan); }
+#ticker span b { color: var(--gold); font-weight: 800; }
 @keyframes tick { from { transform: translateX(var(--from)); } to { transform: translateX(var(--to)); } }
 
 /* ---- big event toast ---- */
