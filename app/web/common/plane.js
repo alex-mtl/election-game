@@ -137,7 +137,7 @@ window.Plane = (() => {
     row.innerHTML = PLANE + '<div class="pl-rope"></div>';
     const banner = document.createElement('div'); banner.className = 'pl-banner';
     const likes = document.createElement('span'); likes.className = 'hearts';
-    likes.textContent = '❤ ' + Number(e.total).toLocaleString(I18N.lang === 'ru' ? 'ru-RU' : 'en-US');
+    likes.textContent = '❤ ' + Number(e.total).toLocaleString(I18N.locale);
     const top = document.createElement('div'); top.className = 'top';
     top.append(avatar(e.name, e.avatar), likes);
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = clean(e.name);

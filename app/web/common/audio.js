@@ -131,9 +131,21 @@ window.AudioKit = (() => {
     ...['zira', 'aria', 'jenny', 'ava', 'emma', 'michelle', 'samantha', 'hazel', 'susan', 'female', 'linda']
       .map(n => v => /^en/i.test(v.lang) && v.name.toLowerCase().includes(n)),
   ];
+  // French / Spanish: female voices (Edge online / Windows / macOS / Android)
+  const FR_PREFS = [
+    ...['denise', 'vivienne', 'eloise', 'hortense', 'julie', 'brigitte', 'amelie', 'audrey', 'marie', 'female']
+      .map(n => v => /^fr/i.test(v.lang) && v.name.toLowerCase().includes(n)),
+    v => /^fr-FR/i.test(v.lang), v => /^fr/i.test(v.lang),
+  ];
+  const ES_PREFS = [
+    ...['elvira', 'ximena', 'dalia', 'helena', 'laura', 'sabina', 'paloma', 'monica', 'paulina', 'female']
+      .map(n => v => /^es/i.test(v.lang) && v.name.toLowerCase().includes(n)),
+    v => /^es-ES/i.test(v.lang), v => /^es/i.test(v.lang),
+  ];
+  const PREFS = { ru: RU_PREFS, fr: FR_PREFS, es: ES_PREFS };
   function femaleVoices() {
     const vs = synth ? synth.getVoices() : [], out = [];
-    (lang === 'ru' ? RU_PREFS : VOICE_PREFS).forEach(p => vs.filter(p).forEach(v => { if (!out.includes(v)) out.push(v); }));
+    (PREFS[lang] || VOICE_PREFS).forEach(p => vs.filter(p).forEach(v => { if (!out.includes(v)) out.push(v); }));
     return out;
   }
   const voiceKey = () => (lang === 'en' ? 'voice' : 'voice_' + lang);
@@ -141,7 +153,7 @@ window.AudioKit = (() => {
     const vs = synth ? synth.getVoices() : [];
     let want = qs.get('voice');
     if (!want) { try { want = localStorage.getItem(voiceKey()); } catch (e) {} }
-    const fits = v => (lang === 'ru' ? /^ru/i : /^(en|zh)/i).test(v.lang);
+    const fits = v => (PREFS[lang] ? new RegExp('^' + lang, 'i') : /^(en|zh)/i).test(v.lang);
     voice = (want && vs.find(v => fits(v) && v.name.toLowerCase().includes(want.toLowerCase())))
          || femaleVoices()[0] || vs.find(v => new RegExp('^' + lang, 'i').test(v.lang)) || null;
   }
@@ -153,7 +165,7 @@ window.AudioKit = (() => {
     if (o.urgent) synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
     if (voice) u.voice = voice;
-    u.lang = voice ? voice.lang : (lang === 'ru' ? 'ru-RU' : 'en-US'); u.volume = 1;
+    u.lang = voice ? voice.lang : ({ ru: 'ru-RU', fr: 'fr-FR', es: 'es-ES' }[lang] || 'en-US'); u.volume = 1;
     // one speed for all lines (excited ones differ only by pitch); o.rate = exact speed, e.g. 1 for key phrases
     u.rate = o.rate || Math.min(10, 1.05 * rateMul); u.pitch = o.excited ? 1.35 : 1.05;
     if (o.onend) u.onend = o.onend;

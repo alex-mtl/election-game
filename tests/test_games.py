@@ -123,7 +123,7 @@ class GuessTest(unittest.TestCase):
         store = JsonStore(tempfile.mkdtemp(dir=self.tmp))
         g = GuessGame(store)
         g.tick(time.time()); g.tick(time.time() + 0.01)
-        g.on_comment(v("Alex"), "water")
+        g.on_comment(v("Alex"), "water" if g.secret != "water" else "fire")   # not the secret itself
         g.save()
         g2 = GuessGame(store)
         self.assertEqual(g2.secret, g.secret)
@@ -183,7 +183,7 @@ class RussianTest(unittest.TestCase):
             g.tick(max(time.time(), g.phase_until) + 0.1)
         self.assertEqual(g.sem.level, "easy")
         self.assertIn("быстро", g.sem.index)                       # easy: any part of speech
-        self.assertEqual(g.snapshot()["languages"], ["en", "ru"])
+        self.assertEqual(g.snapshot()["languages"], ["en", "es", "fr", "ru"])
 
     def test_switch_language_starts_new_round(self):
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
@@ -194,6 +194,42 @@ class RussianTest(unittest.TestCase):
         self.assertEqual(g.phase, guess_mod.COUNTDOWN)
         self.assertNotEqual(g.secret, en_secret)
         self.assertEqual(g.round_lang, "ru")
+
+
+class RomanceTest(unittest.TestCase):
+    def test_french(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        self.assertIn("fr", g.sems)
+        g.set_lang("fr")
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        n = g.sem.normalize
+        self.assertEqual(n("Chiens")[0], "chien")             # plural -> lemma
+        self.assertEqual(n("le chat")[0], "chat")             # article dropped
+        self.assertEqual(n("l’arbre")[0], "arbre")       # elision, typographic apostrophe
+        self.assertEqual(n("ecureuil")[0], "écureuil")        # typed without accents
+        for w in ("rapidement", "manger", "courir"):
+            self.assertNotIn(w, g.sem.index)                  # not nouns
+        r, _ = g.sem.ranking("chien")
+        idx = g.sem.index
+        self.assertLess(r[idx["chiot"]], r[idx["volcan"]])
+        g.on_comment(Viewer("zoe", "Zoé", "", 1), g.secret)
+        self.assertEqual(g.winner["name"], "Zoé")
+
+    def test_spanish(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        self.assertIn("es", g.sems)
+        g.set_lang("es")
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        n = g.sem.normalize
+        self.assertEqual(n("los perros")[0], "perro")
+        self.assertEqual(n("Árbol")[0], "árbol")
+        self.assertEqual(n("arbol")[0], "árbol")               # without accents
+        for w in ("rápidamente", "comer", "haber"):
+            self.assertNotIn(w, g.sem.index)
+        r, _ = g.sem.ranking("perro")
+        idx = g.sem.index
+        self.assertLess(r[idx["cachorro"]], r[idx["factura"]])
+        self.assertEqual(g.snapshot()["languages"], ["en", "es", "fr", "ru"])
 
 
 class GiftHintTest(unittest.TestCase):
@@ -234,6 +270,28 @@ class GiftHintTest(unittest.TestCase):
         self.assertEqual(GuessGame(store).credits, {})                     # saved
         g.on_comment(eva, "подсказка")                                     # no credits left: a guess
         self.assertEqual(len(g.hints), 1)
+
+    def test_gift_combo_goes_on_account_with_cooldown(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        g.set_option("hint_cd", 20)
+        eva = Viewer("eva", "Eva", "", 1)
+        g.on_gift(eva, "Rose", 5)                          # x5: one hint now, 4 on the account
+        self.assertEqual(len(g.hints), 1)
+        self.assertEqual(g.credits["eva"], 4)
+        g.on_gift(eva, "Rose", 1)                          # within 20 s: on the account
+        self.assertEqual(len(g.hints), 1)
+        self.assertEqual(g.credits["eva"], 5)
+        g.on_comment(eva, "подсказка")                     # too soon: nothing spent
+        self.assertEqual(len(g.hints), 1)
+        self.assertEqual(g.credits["eva"], 5)
+        g.hint_t["eva"] -= 21                              # 21 s later
+        g.on_comment(eva, "Подсказка")
+        self.assertEqual(len(g.hints), 2)
+        self.assertEqual(g.credits["eva"], 4)
+        g.on_comment(eva, "подсказка")                     # again too soon
+        self.assertEqual(len(g.hints), 2)
+        self.assertEqual(g.get_options()["hint_cd"], 20)
 
     def test_gift_hint_beats_best_guess(self):
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
@@ -316,7 +374,8 @@ class NonStopTest(unittest.TestCase):
         g.set_option("round_min", 20)
         g.set_option("follow", 0)
         g.set_option("grace", 60)
-        self.assertEqual(g.get_options(), {"pause": 30, "round_min": 20, "follow": 0, "grace": 60, "level": 2})
+        self.assertEqual(g.get_options(), {"pause": 30, "round_min": 20, "follow": 0, "grace": 60, "level": 2,
+                                           "hint_cd": 20})
         self.assertFalse(g.follow_required)
         g.tick(time.time()); g.tick(time.time() + 0.01)
         self.assertAlmostEqual(g.ends_at - g.started_at, 20 * 60, delta=1)   # 20-minute round
@@ -371,7 +430,7 @@ class GiftReceiverTest(unittest.TestCase):
         self.assertEqual(len(g.hints), 0)
         hub.gift(alex, "Rose", 1, to=config.TIKTOK_USERNAME.upper())  # to the host
         self.assertEqual(len(g.hints), 1)
-        hub.gift(alex, "Rose", 1)                                      # receiver unknown: the host
+        hub.gift(Viewer("bob", "Bob", "", 1), "Rose", 1)               # receiver unknown: the host
         self.assertEqual(len(g.hints), 2)
 
 
@@ -441,6 +500,19 @@ class BomberTest(unittest.TestCase):
             self.assertEqual([i + 1 for i, p in enumerate(planes) if p["bomber"]], [10, 20])   # 10 000, 20 000
         finally:
             config.PLANE_BOMBER_LIKES, config.PLANE_AUTO_LIKES = saved
+
+
+class BattleKeysTest(unittest.TestCase):
+    def test_team_keys_per_language(self):
+        from app.games.battle.game import parse_color
+        self.assertEqual(parse_color("Y", "en"), "yellow")
+        self.assertIsNone(parse_color("I want a win", "en"))        # "a" is not a key in English
+        self.assertEqual(parse_color("a", "es"), "yellow")
+        self.assertEqual(parse_color("J !", "fr"), "yellow")
+        self.assertEqual(parse_color("ж", "ru"), "yellow")
+        self.assertIsNone(parse_color("ж", "en"))
+        self.assertEqual(parse_color("vamos rojo", "en"), "red")    # colour words: any language
+        self.assertEqual(parse_color("allez les jaunes", "es"), "yellow")
 
 
 class BattleTest(unittest.TestCase):

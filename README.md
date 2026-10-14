@@ -204,3 +204,7 @@ docker run --rm -v "%cd%/tests:/app/tests" election-game python -m unittest disc
 
 - Plane engine sound: "Low passing aeroplane, An-2R (HA-MEN), a bit farther" by ycbcr,
   https://freesound.org/s/350574/, CC BY 4.0 (cut into a loop, see `app/web/common/sounds/CREDITS.txt`).
+- Word data: wordfreq (MIT code, CC BY-SA 4.0 data), WordNet 3.0 and Open Multilingual Wordnet, pymorphy3 + OpenCorpora (RU),
+  spaCy fr/es small models, NLTK stopwords.
+- Embedding models: all-MiniLM-L6-v2 (EN, Apache 2.0), rubert-tiny2 (RU, MIT), LaBSE (FR, Apache 2.0),
+  hiiamsid/sentence_similarity_spanish_es (ES, Apache 2.0, built on BETO by dccuchile).

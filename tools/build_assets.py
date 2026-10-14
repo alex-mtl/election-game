@@ -111,7 +111,10 @@ def secret_noun_ok(w, vocab_set):
 
 
 MODELS = {"en": "sentence-transformers/all-MiniLM-L6-v2",   # Apache 2.0
-          "ru": "cointegrated/rubert-tiny2"}                 # MIT
+          "ru": "cointegrated/rubert-tiny2",                 # MIT
+          # chosen by ranking related single nouns (median rank: fr 40 vs 867, es 16 vs 150 for multilingual MiniLM)
+          "fr": "sentence-transformers/LaBSE",                         # Apache 2.0
+          "es": "hiiamsid/sentence_similarity_spanish_es"}             # BETO-based Spanish model
 
 
 def build_en(vocab_size):
@@ -136,6 +139,7 @@ def build_en(vocab_size):
 
 # words of 2 letters are mostly junk (abbreviations, notes); these are real nouns
 EN_SHORT = {"ox", "ax"}
+NOUN_RE = re.compile(r"^[a-z]{3,20}$")       # normal level: up to 20 letters (easy keeps WORD_RE)
 CONCRETE = {"noun.artifact", "noun.animal", "noun.plant", "noun.food", "noun.body",
             "noun.object", "noun.substance"}
 
@@ -146,10 +150,10 @@ def build_en_normal(vocab_size):
     bad = profanity_set()
     vocab, aliases, seen = [], {}, set()
     for w in top_n_list("en", 2_000_000, wordlist="large"):
-        if not (WORD_RE.match(w) or w in EN_SHORT) or w in bad:
+        if not (NOUN_RE.match(w) or w in EN_SHORT) or w in bad:
             continue
         lemma = wn.morphy(w, wn.NOUN)
-        if not lemma or not (WORD_RE.match(lemma) or lemma in EN_SHORT) or lemma in bad:
+        if not lemma or not (NOUN_RE.match(lemma) or lemma in EN_SHORT) or lemma in bad:
             continue
         if lemma not in seen:
             seen.add(lemma)
@@ -225,6 +229,9 @@ def main():
     if args.lang == "ru":
         from lang_ru import build_ru, build_ru_normal
         build = build_ru if args.level == "easy" else build_ru_normal
+    elif args.lang in ("fr", "es"):                   # normal level only
+        from lang_romance import build_romance
+        build = lambda n: build_romance(args.lang, n)
     else:
         build = build_en if args.level == "easy" else build_en_normal
     vocab, aliases, pools, categories, sources, checks = build(size)

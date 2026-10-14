@@ -51,12 +51,19 @@ WINNER_SEC = _i("WINNER_SEC", 5)                        # winner card
 REVEAL_SEC = _i("REVEAL_SEC", 115)                      # break between rounds: results, then promo/lobby
 ROUND_BREAK = _b("ROUND_BREAK", "1")                    # default for the menu switch: pause between rounds
 RESULTS_SEC = _i("RESULTS_SEC", 25)                     # first part of the break shows the round results
-LANGUAGES = ["en", "ru"]
+LANGUAGES = ["en", "ru", "fr", "es"]
 GREET_JOINS = _b("GREET_JOINS", "1")                    # welcome viewers who join the LIVE (once per stream)
 VOICE_RATE = _f("VOICE_RATE", 1.5)                      # speech speed multiplier (1 = normal browser speed)
-LANGUAGE = os.getenv("LANGUAGE", "en")                   # default language: en | ru (menu can switch)
+LANGUAGE = os.getenv("LANGUAGE", "en")                   # default language: en | ru | fr | es (menu can switch)
 PROMO_LINES_RU = [x.strip() for x in os.getenv("PROMO_LINES_RU", "ПОДПИШИСЬ, чтобы не пропустить раунд|ПОДПИШИСЬ и играй с нами|Зови друзей — чем больше игроков, тем веселее").split("|") if x.strip()]
 PROMO_LINES = [x.strip() for x in os.getenv("PROMO_LINES", "FOLLOW so you never miss a round|SUBSCRIBE to join the game|Invite friends - more players, more fun").split("|") if x.strip()]
+PROMO_LINES_BY_LANG = {
+    "en": PROMO_LINES, "ru": PROMO_LINES_RU,
+    "fr": ["ABONNE-TOI pour ne rater aucune manche", "ABONNE-TOI et joue avec nous",
+           "Ramène tes potes — plus on est de fous, plus on rit"],
+    "es": ["SÍGUEME para no perderte ninguna ronda", "SÍGUEME y juega con nosotros",
+           "Invita a tus amigos — ¡cuantos más, mejor!"],
+}
 GUESS_COOLDOWN_SECONDS = _f("GUESS_COOLDOWN_SECONDS", 3)
 # rank upper bounds: PERFECT, BURNING, VERY HOT, HOT, WARM, COLD (rest = FREEZING)
 TEMPERATURE_BOUNDS = [int(x) for x in _list("TEMPERATURE_BOUNDS", "1,10,50,200,1000,5000")]

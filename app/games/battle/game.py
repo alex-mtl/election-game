@@ -13,14 +13,21 @@ from collections import defaultdict
 from ... import config
 from ..base import BaseGame, Viewer
 
-RED_KEYS = {"r", "red", "красный", "красная", "красные", "к"}
-YELLOW_KEYS = {"y", "yellow", "желтый", "жёлтый", "желтая", "жёлтая",
-               "желтые", "жёлтые", "ж"}
+# colour words count in any language
+RED_KEYS = {"r", "red", "красный", "красная", "красные", "rouge", "rouges", "rojo", "roja", "rojos", "rojas"}
+YELLOW_KEYS = {"yellow", "желтый", "жёлтый", "желтая", "жёлтая", "желтые", "жёлтые",
+               "jaune", "jaunes", "amarillo", "amarilla", "amarillos", "amarillas"}
+# one-letter keys only in their own language ("a" is a word in English and Spanish, "к" in Russian)
+LETTER_KEYS = {"en": {"r": "red", "y": "yellow"}, "ru": {"к": "red", "ж": "yellow"},
+               "fr": {"r": "red", "j": "yellow"}, "es": {"r": "red", "a": "yellow"}}
 
 
-def parse_color(comment):
+def parse_color(comment, lang="en"):
     """'red' | 'yellow' | None based on the first team keyword in the comment."""
+    letters = LETTER_KEYS.get(lang, LETTER_KEYS["en"])
     for w in re.findall(r"\w+", (comment or "").lower()[:200]):
+        if w in letters:
+            return letters[w]
         if w in RED_KEYS:
             return "red"
         if w in YELLOW_KEYS:
@@ -123,8 +130,13 @@ class BattleGame(BaseGame):
         return rec, color
 
     # ---- hooks ----
+    lang = "en"
+
+    def set_lang(self, lang):
+        self.lang = lang                                 # which one-letter team keys count
+
     def on_comment(self, viewer: Viewer, text: str, ts=None):
-        color = parse_color(text)
+        color = parse_color(text, self.lang)
         if color and self.tap(viewer.id, color, viewer.name):
             print(f"[battle] tap {viewer.name} ({viewer.id}) -> {color}")
 

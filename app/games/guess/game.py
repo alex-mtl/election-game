@@ -70,7 +70,8 @@ class GuessGame(BaseGame):
                "round_min": [10, 20, 30],          # round length, minutes
                "follow": [1, 0],                   # only followers can play / win
                "grace": [15, 30, 60],              # seconds a non-follower gets to follow
-               "level": [1, 2]}                    # dictionary: 1 easy (any word), 2 normal (nouns)
+               "level": [1, 2],                    # dictionary: 1 easy (any word), 2 normal (nouns)
+               "hint_cd": [5, 10, 15, 20]}         # seconds between two hints of the same viewer
     STATE = "guess/state.json"
     USED = "guess/used_words.json"
     ROUNDS = "guess/rounds.json"
@@ -90,6 +91,8 @@ class GuessGame(BaseGame):
         self.follow_required = config.FOLLOW_REQUIRED    # only followers can play (menu setting)
         self.follow_grace = int(config.FOLLOW_GRACE_SEC)
         self.level = self.round_level = 2            # dictionary level, from the next round
+        self.hint_cd = 20                            # a viewer's next hint (gift or credit) after this many s
+        self.hint_t = {}                             # viewer id -> time of their last hint
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
         if isinstance(used, list):                   # old format: English only
@@ -386,7 +389,14 @@ class GuessGame(BaseGame):
         if g in config.GIFT_NEW_ROUND_NAMES and self.phase == PLAYING:
             self._finish(time.time(), "skip")
         elif g not in config.GIFT_NEW_ROUND_NAMES and g not in config.GIFT_HINT_EXCLUDE:   # any gift
-            self.give_hint(viewer.name, viewer=viewer)
+            # one hint now (unless this viewer had one less than hint_cd s ago), every other gift
+            # of the combo goes on their account: spent later with "подсказка", one at a time
+            n, now = max(1, int(count or 1)), time.time()
+            if self._hint_wait(viewer, now) == 0 and self.give_hint(viewer.name, now, viewer=viewer):
+                self.hint_t[viewer.id] = now
+                n -= 1
+            if n:
+                self.add_credits(viewer.id, n)
 
     # ------------------------------------------------------------------ hint credits
     def add_credits(self, viewer_id, n=1):
@@ -403,9 +413,20 @@ class GuessGame(BaseGame):
         print(f"[guess] hint credits {viewer_id}: {left}")
         return left
 
+    def _hint_wait(self, viewer, now):
+        """Seconds this viewer still has to wait for their next hint (0 = now)."""
+        return max(0, self.hint_t.get(viewer.id, 0) + self.hint_cd - now)
+
     def use_credit(self, viewer, now=None):
+        now = now or time.time()
+        wait = self._hint_wait(viewer, now)
+        if wait > 0:                                     # too soon: the credit stays on the account
+            self.emit("hint_wait", name=viewer.name, avatar=viewer.avatar, seconds=int(wait) + 1)
+            print(f"[guess] {viewer.name}: next hint in {int(wait) + 1}s")
+            return None
         h = self.give_hint(viewer.name, now, viewer=viewer)
         if h:
+            self.hint_t[viewer.id] = now
             left = self.add_credits(viewer.id, -1)
             print(f"[guess] {viewer.name} used a hint credit ({left} left)")
         return h
@@ -461,6 +482,8 @@ class GuessGame(BaseGame):
             self.follow_required = bool(value)
         elif key == "grace":
             self.follow_grace = int(value)
+        elif key == "hint_cd":
+            self.hint_cd = int(value)
         elif key == "level" and int(value) in self.OPTIONS["level"]:
             self.level = int(value)                      # from the next round
         self.dirty = True
@@ -468,7 +491,7 @@ class GuessGame(BaseGame):
     def get_options(self):
         return {"pause": self.pause_sec, "round_min": self.round_sec // 60,
                 "follow": int(self.follow_required), "grace": int(self.follow_grace),
-                "level": self.level}
+                "level": self.level, "hint_cd": self.hint_cd}
 
     @property
     def reveal_sec(self):
@@ -660,7 +683,7 @@ class GuessGame(BaseGame):
             "temps": dict(zip(TEMPS, config.TEMPERATURE_BOUNDS + [None])),
             "subscribersOnly": config.SUBSCRIBERS_ONLY,
             "breakSec": self.reveal_sec, "resultsSec": min(config.RESULTS_SEC, self.reveal_sec),
-            "promo": config.PROMO_LINES_RU if self.lang == "ru" else config.PROMO_LINES,
+            "promo": config.PROMO_LINES_BY_LANG.get(self.lang, config.PROMO_LINES),
             "lang": self.round_lang, "languages": sorted({k.split("-")[0] for k in self.sems}),
             "goal": {"label": config.GOAL_LABEL, "value": self.stats.follows,
                      "target": config.GOAL_TARGET} if config.GOAL_TARGET else None,

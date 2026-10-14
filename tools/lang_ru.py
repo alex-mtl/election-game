@@ -57,7 +57,7 @@ def build_ru(vocab_size):
 
 # words of 2 letters are mostly junk (notes, letters, units); these are real nouns
 RU_SHORT = {"ад", "ас", "еж", "ил", "ум", "уж", "ус", "щи", "юг", "яд", "як"}
-RU_NOUN_RE = re.compile(r"^[а-я]{3,15}$")
+RU_NOUN_RE = re.compile(r"^[а-я]{3,20}$")
 
 
 def common_noun(morph, w):
@@ -78,7 +78,7 @@ def build_ru_normal(vocab_size):
     vocab, aliases, seen = [], {}, set()
     for raw in top_n_list("ru", 2_000_000, wordlist="large"):
         w = norm(raw)
-        if not re.match(r"^[а-я]{2,15}$", w):
+        if not re.match(r"^[а-я]{2,20}$", w):
             continue
         p = common_noun(morph, w)
         if p is None:

@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const A = AudioKit, t = I18N.t;
-  const fmt = n => Number(n).toLocaleString(I18N.lang === 'ru' ? 'ru-RU' : 'en-US');   // 22,344 / 22 344
+  const fmt = n => Number(n).toLocaleString(I18N.locale);   // 22,344 / 22 344
   const clean = n => (n || '').replace(/[^\p{L}\p{N} ._'-]/gu, '').trim() || 'Someone';
   const tKey = s => (s || '').toLowerCase().replace(/\s/g, '');
   // streak params: {n} for English, {wins} = "2 победы" / {winsUp} = "2 ПОБЕДЫ" (Russian plural forms)
@@ -184,6 +184,9 @@
         fx('streak', e.n);
         toast(NAME, t('g.t.streak', streakP(e.n)), 'var(--orange)', { huge: e.n >= 3, important: true, hold: e.n >= 5 ? 2.8 : 2 });
         voice(t('g.v.streak', Object.assign(streakP(e.n), { name })), 'high');
+        break;
+      case 'hint_wait':
+        mini(t('g.t.hintWait', { name, s: e.seconds }), 'gift');
         break;
       case 'gift':
         fx('gift');

@@ -8,9 +8,13 @@ import re
 
 import numpy as np
 
-ARTICLES = {"a", "an", "the"}
+# "the cat", "le chat", "el gato": the article is dropped
+ARTICLES = {"en": {"a", "an", "the"}, "ru": set(),
+            "fr": {"le", "la", "les", "un", "une", "des", "du", "de"},
+            "es": {"el", "la", "los", "las", "un", "una", "unos", "unas"}}
 # letters of a guess per language (anything else in a single-word message = not a guess)
-LETTERS = {"en": "a-z", "ru": "а-яё"}
+LETTERS = {"en": "a-z", "ru": "а-яё", "fr": "a-zàâæçéèêëîïôœùûüÿ", "es": "a-záéíóúüñ"}
+ELISION = re.compile(r"^(?:l|d|j|m|n|s|t|c|qu)'")      # French: l'arbre -> arbre
 
 
 class SemanticIndex:
@@ -36,11 +40,13 @@ class SemanticIndex:
     def normalize(self, text):
         """Chat message -> dictionary word, or None if it isn't a single-word guess.
         Returns (word, raw) where word may be None for unknown words."""
-        text = (text or "")[:60].strip().lower().replace("ё", "е")
+        text = (text or "")[:60].strip().lower().replace("ё", "е").replace("’", "'")
         letters = LETTERS.get(self.lang, "a-z")
         tokens = re.findall(rf"[{letters}]+(?:['-][{letters}]+)*", text)
-        if len(tokens) == 2 and tokens[0] in ARTICLES:
+        if len(tokens) == 2 and tokens[0] in ARTICLES.get(self.lang, ()):
             tokens = tokens[1:]
+        if self.lang == "fr" and len(tokens) == 1:
+            tokens = [ELISION.sub("", tokens[0])]
         if len(tokens) != 1:
             return None, None
         # anything except letters/punctuation (digits, emoji-only...) -> not a guess
