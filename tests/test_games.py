@@ -198,7 +198,6 @@ class RussianTest(unittest.TestCase):
 
 class GiftHintTest(unittest.TestCase):
     def test_gift_hint_counts_as_gifter_guess(self):
-        config.GIFT_HINT_NAMES = ["rose"]
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
         g.tick(time.time()); g.tick(time.time() + 0.01)
         mike = Viewer("mike", "Mike", "", 1)
@@ -212,8 +211,14 @@ class GiftHintTest(unittest.TestCase):
         g.on_gift(Viewer("sara", "Sara", "", 1), "Rose", 1)    # no cooldown between gifters
         self.assertEqual(len(g.hints), 2)
 
+    def test_any_gift_gives_hint(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        g.on_gift(Viewer("eva", "Eva", "", 1), "Mirwas Beat", 1)
+        self.assertEqual(len(g.hints), 1)
+        self.assertEqual(g.hints[-1]["by"], "Eva")
+
     def test_gift_hint_beats_best_guess(self):
-        config.GIFT_HINT_NAMES = ["rose"]
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
         g.tick(time.time()); g.tick(time.time() + 0.01)
         close = g.sem.words[int(g.order[29])]                 # someone already guessed the #30 word
@@ -228,7 +233,6 @@ class GiftHintTest(unittest.TestCase):
             best = min(best, r)
 
     def test_gift_hint_after_second_best_wins(self):
-        config.GIFT_HINT_NAMES = ["rose"]
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
         g.tick(time.time()); g.tick(time.time() + 0.01)
         g.on_comment(Viewer("ann", "Ann", "", 1), g.sem.words[int(g.order[1])])   # the #2 word

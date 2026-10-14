@@ -376,7 +376,7 @@ class GuessGame(BaseGame):
         g = gift.lower()
         if g in config.GIFT_NEW_ROUND_NAMES and self.phase == PLAYING:
             self._finish(time.time(), "skip")
-        elif g in config.GIFT_HINT_NAMES:
+        elif g not in config.GIFT_NEW_ROUND_NAMES and g not in config.GIFT_HINT_EXCLUDE:   # any gift
             self.give_hint(viewer.name, viewer=viewer)
 
     def on_follow(self, viewer: Viewer):
