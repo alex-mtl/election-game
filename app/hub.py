@@ -134,8 +134,13 @@ class Hub:
             self._feed(type="join", name=v.name, avatar=v.avatar)
         self.game.on_join(v)
 
-    def gift(self, v: Viewer, gift, count):
-        self._feed(type="gift", name=v.name, avatar=v.avatar, gift=gift, count=count)
+    def gift(self, v: Viewer, gift, count, to=""):
+        """A gift on the stream. Only gifts to the host count in the game (hints); a gift to a guest
+        or co-host on the same live is just shown."""
+        self._feed(type="gift", name=v.name, avatar=v.avatar, gift=gift, count=count, to=to)
+        if to and to.lower() != config.TIKTOK_USERNAME.lower():
+            print(f"[gift] {v.name}: {gift} went to @{to}, not to the host -> no game action")
+            return
         self.game.on_gift(v, gift, count)
 
     def follow(self, v: Viewer):

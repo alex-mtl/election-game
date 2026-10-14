@@ -124,28 +124,32 @@ class TikTokConnector:
         def deliver(key):
             st = streaks.pop(key, None)
             if st:
-                print(f"[gift] {st['viewer'].name}: {st['name']} x{st['count']}")
-                hub.gift(st["viewer"], st["name"], st["count"])
+                to = st.get("to") or ""
+                print(f"[gift] {st['viewer'].name}: {st['name']} x{st['count']}" + (f" -> @{to}" if to else ""))
+                hub.gift(st["viewer"], st["name"], st["count"], to=to)
 
         def gift(event):
             v = viewer_of(event.user)
             name = getattr(event.gift, "name", "") or "Gift"
             count = int(getattr(event, "repeat_count", 1) or 1)
             streaking = bool(event.streaking)
+            # the receiver: the host, or someone else on the stream (a guest / co-host in a multi-guest live)
+            to_user = getattr(event, "to_user", None)
+            to = str(getattr(to_user, "unique_id", "") or "") if to_user else ""
             if config.LOG_CHAT:
-                print(f"[gift] event {v.name}: {name} x{count} streaking={streaking}")
+                print(f"[gift] event {v.name}: {name} x{count} streaking={streaking} to=@{to or '-'}")
             key = (v.id, name)
             if not streaking:                     # single gift or end of a combo
                 old = streaks.pop(key, None)
                 if old and old.get("timer"):
                     old["timer"].cancel()
-                streaks[key] = {"viewer": v, "name": name, "count": count}
+                streaks[key] = {"viewer": v, "name": name, "count": count, "to": to}
                 deliver(key)
                 return
             # combo in progress: wait for its end, but don't lose it if the end never arrives
             st = streaks.get(key)
             if st is None:
-                st = streaks[key] = {"viewer": v, "name": name, "count": count}
+                st = streaks[key] = {"viewer": v, "name": name, "count": count, "to": to}
             st["count"] = max(st["count"], count)
             if st.get("timer"):
                 st["timer"].cancel()

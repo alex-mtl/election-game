@@ -359,6 +359,22 @@ class BalloonsTest(unittest.TestCase):
         self.assertIn("balloons", hub.message("guess"))
 
 
+class GiftReceiverTest(unittest.TestCase):
+    def test_gift_to_someone_else_gives_no_hint(self):
+        from app.hub import Hub
+        hub = Hub(JsonStore(tempfile.mkdtemp()))
+        hub.set_active("guess")
+        g = hub.games["guess"]
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        alex = Viewer("alex_mg", "Alex", "", 1)
+        hub.gift(alex, "You're awesome", 5, to="someguest")           # to a guest on the stream
+        self.assertEqual(len(g.hints), 0)
+        hub.gift(alex, "Rose", 1, to=config.TIKTOK_USERNAME.upper())  # to the host
+        self.assertEqual(len(g.hints), 1)
+        hub.gift(alex, "Rose", 1)                                      # receiver unknown: the host
+        self.assertEqual(len(g.hints), 2)
+
+
 class NoLikesCommandTest(unittest.TestCase):
     def test_likes_command_is_gone(self):
         from app.hub import Hub
