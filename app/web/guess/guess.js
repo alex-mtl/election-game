@@ -440,9 +440,8 @@
   function applyChroma(top, frame) {
     const root = document.documentElement;
     root.classList.toggle('chroma', top > 0);
-    // the green zone keeps its 9:16 height (top % of a 9:16 frame); a taller frame (9:19.5, 9:20)
-    // gives all the extra height to the game
-    if (top > 0) root.style.setProperty('--chroma-top', `calc(var(--u) * ${(1.7778 * top).toFixed(2)})`);
+    // the green zone is top % of the frame's real height (9:16, 9:19.5 or 9:20)
+    if (top > 0) root.style.setProperty('--chroma-top', `calc(var(--u) * ${(100 * frame / 9 * top / 100).toFixed(2)})`);
     root.style.setProperty('--fh', (100 * frame / 9).toFixed(2));
     root.style.setProperty('--fr', (frame / 9).toFixed(4));
     const zone = $('chromaZone'), stage = $('stage');
