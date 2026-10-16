@@ -8,6 +8,7 @@
   // streak params: {n} for English, {wins} = "2 победы" / {winsUp} = "2 ПОБЕДЫ" (Russian plural forms)
   const streakP = n => ({ n, wins: I18N.n(n, 'win'), winsUp: I18N.n(n, 'win').toUpperCase() });
   let S = null;                       // last state
+  let hintUntil = 0, hintTimer = null;  // the hint card is shown for 3 s
   let vocab = 30000;
 
   // Put text into a big headline and shrink the font until it fits its container's width
@@ -274,6 +275,7 @@
     prevHunters = new Map(list.map(h => [h.name, h.rank]));
   }
 
+  const isHintWord = w => ((S && S.hints) || []).some(h => h.type === 'semantic' && h.word === w);
   function guessRow(g, cls) {
     // one line: [ proximity bar behind (rank  WORD) ] [avatar name +N]
     const row = el('div', 'grow ' + (cls || ''));
@@ -292,7 +294,9 @@
       main.append(el('span', 'rk', '?'), el('span', 'wd', g.word), el('span', 'note', t('g.notInDict')));
     } else {
       bar.style.width = Math.round(closeness(g.rank) * 100) + '%';
-      main.append(bar, el('span', 'rk t-' + g.tempKey, fmt(g.rank)), el('span', 'wd', g.word));
+      main.append(bar, el('span', 'rk t-' + g.tempKey, fmt(g.rank)));
+      if (isHintWord(g.word)) main.append(el('span', 'hk', '💡'));   // this word came as a hint
+      main.append(el('span', 'wd', g.word));
     }
     row.append(main, who);
     return row;
@@ -476,12 +480,16 @@
     renderGuesses(s.bestGuesses);
     tagline(s);
 
+    // the hint card shows for 3 s after a new hint; the word stays marked 💡 in the guesses
     const h = s.hints[s.hints.length - 1];
-    $('hintCard').hidden = !h;
-    if (h) {
+    if (h && s.hints.length !== prevHintCount) {
       const ht = hintText(h); $('hintText').textContent = ht.text; $('hintWord').textContent = ht.word;
-      if (s.hints.length !== prevHintCount) { $('hintCard').classList.remove('new'); void $('hintCard').offsetWidth; $('hintCard').classList.add('new'); }
+      $('hintCard').classList.remove('new'); void $('hintCard').offsetWidth; $('hintCard').classList.add('new');
+      hintUntil = Date.now() + 3000;
+      clearTimeout(hintTimer);
+      hintTimer = setTimeout(() => { $('hintCard').hidden = true; }, 3000);
     }
+    $('hintCard').hidden = !h || Date.now() >= hintUntil;
     prevHintCount = s.hints.length;
 
     $('winner').hidden = s.phase !== 'winner';
