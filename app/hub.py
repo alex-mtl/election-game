@@ -47,6 +47,7 @@ class Hub:
         self.feed_sent = 0
         self.greeted = set()                      # viewers already welcomed this stream
         self.balloons = LikeBalloons(store)       # like balloons fly over every page
+        self.closed = False                       # set on shutdown: incoming events are ignored
         self.game.on_activate()
 
     @property
@@ -122,11 +123,15 @@ class Hub:
         self.feed.append(e)
 
     def comment(self, v: Viewer, text, ts=None):
+        if self.closed:                               # shutting down: nothing changes any more
+            return
         self._feed(type="chat", name=v.name, avatar=v.avatar, text=text[:200], sent=ts,
                    host=v.id.lower() == config.TIKTOK_USERNAME.lower())
         self.game.on_comment(v, text, ts)
 
     def join(self, v: Viewer):
+        if self.closed:                               # shutting down: nothing changes any more
+            return
         # welcome each viewer once per stream (pages throttle and merge the greetings)
         if config.GREET_JOINS and v.id not in self.greeted and v.id.lower() != config.TIKTOK_USERNAME.lower():
             if len(self.greeted) > 20000:
@@ -138,6 +143,8 @@ class Hub:
     def gift(self, v: Viewer, gift, count, to=""):
         """A gift on the stream. Only gifts to the host count in the game (hints); a gift to a guest
         or co-host on the same live is just shown."""
+        if self.closed:                               # shutting down: nothing changes any more
+            return
         self._feed(type="gift", name=v.name, avatar=v.avatar, gift=gift, count=count, to=to)
         self._journal_gift(v, gift, count, to)
         if to and to.lower() != config.TIKTOK_USERNAME.lower():
@@ -157,9 +164,13 @@ class Hub:
             print(f"[gift] journal error: {e}")
 
     def follow(self, v: Viewer):
+        if self.closed:                               # shutting down: nothing changes any more
+            return
         self.game.on_follow(v)
 
     def like(self, v: Viewer, count):
+        if self.closed:                               # shutting down: nothing changes any more
+            return
         before = self.balloons.total_of(v.id)
         for b in self.balloons.on_like(v, count):  # 100 likes -> lift off, on whatever page is open
             self._feed(type="balloon", **b)

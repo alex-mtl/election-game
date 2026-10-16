@@ -561,6 +561,22 @@ class JournalTest(unittest.TestCase):
             config.DATA_DIR = saved
 
 
+class ShutdownTest(unittest.TestCase):
+    def test_closed_hub_ignores_events(self):
+        from app.hub import Hub
+        hub = Hub(JsonStore(tempfile.mkdtemp()))
+        hub.set_active("guess")
+        g = hub.games["guess"]
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        hub.closed = True
+        hub.comment(Viewer("late", "Late", "", 1), g.secret)        # arrives while the process stops
+        hub.gift(Viewer("late", "Late", "", 1), "Rose", 1)
+        hub.like(Viewer("late", "Late", ""), 500)
+        self.assertEqual(g.phase, guess_mod.PLAYING)
+        self.assertNotIn("late", g.players)
+        self.assertEqual(g.hints, [])
+
+
 class GiftReceiverTest(unittest.TestCase):
     def test_gift_to_someone_else_gives_no_hint(self):
         from app.hub import Hub

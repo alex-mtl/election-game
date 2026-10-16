@@ -1,6 +1,8 @@
 """Entry point: python -m app [--simulate]"""
 
 import argparse
+import sys
+import os
 import asyncio
 import signal
 
@@ -30,11 +32,15 @@ async def run(simulate):
     try:
         await server.serve()                       # returns on SIGTERM / Ctrl+C
     finally:
+        # first stop taking events (a TikTok connection may still deliver chat for a few seconds while
+        # the process dies: a win then would be lost - it happened once), then the final save
+        hub.closed = True
         for t in bg:
             t.cancel()
         for g in hub.games.values():               # final save
             g.save()
         hub.save_session()
+        hub.balloons.save()
         print("stopped, state saved.")
 
 
@@ -45,6 +51,8 @@ def main():
     ap.add_argument("--simulate", action="store_true", help="fake viewers instead of TikTok")
     args = ap.parse_args()
     asyncio.run(run(args.simulate or config.SIMULATE))
+    sys.stdout.flush()
+    os._exit(0)                                  # no lingering threads (TikTok client) after the save
 
 
 if __name__ == "__main__":
