@@ -3,6 +3,13 @@
 // - game: null = page not tied to a game (menu): only onFeed (comments / gifts of the stream)
 // - follows the active game: if another game is picked in the menu, this page navigates there
 // - Live.now() = server clock in seconds (timers stay in sync with the server)
+// TikTok chroma key mode (html.chroma): the top of the screen is pure green and gets keyed out in
+// LIVE Studio, so nothing else may be green - random colours skip the green hues.
+window.Chroma = {
+  get on() { return document.documentElement.classList.contains('chroma'); },
+  hue(h) { return this.on && h >= 65 && h <= 175 ? (h + 110) % 360 : h; },   // green -> cyan / blue / violet
+};
+
 window.Live = (() => {
   let opts, lastSeq = null, feedSeq = null, offset = 0, ws = null, pollTimer = null, wsRetry = null, version = null;
 

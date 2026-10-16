@@ -106,7 +106,7 @@ window.Plane = (() => {
       img.onerror = () => img.replaceWith(avatar(name, ''));
       return img;
     }
-    const hue = [...(name || '?')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+    const hue = (window.Chroma ? Chroma.hue.bind(Chroma) : x => x)([...(name || '?')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7));
     const d = document.createElement('span');
     d.className = 'av'; d.textContent = (clean(name)[0] || '?').toUpperCase();
     d.style.background = `hsl(${hue} 85% 55%)`;
@@ -198,7 +198,8 @@ window.Plane = (() => {
     <circle cx="20" cy="28" r="16" fill="#222"/><ellipse cx="14" cy="22" rx="5" ry="3" fill="#fff" opacity=".35" transform="rotate(-30 14 22)"/></svg>`;
 
   function butterflySvg() {
-    const h1 = Math.floor(Math.random() * 360), h2 = (h1 + 40 + Math.floor(Math.random() * 120)) % 360;
+    const ch = window.Chroma ? h => Chroma.hue(h) : h => h;           // no green in chroma key mode
+    const h1 = ch(Math.floor(Math.random() * 360)), h2 = ch((h1 + 40 + Math.floor(Math.random() * 120)) % 360);
     const id = 'pl-bf' + Math.random().toString(36).slice(2, 8);
     const up = 'M100 74 C 70 -6, -4 0, 12 62 C 22 98, 74 96, 100 84 Z';
     const low = 'M100 88 C 72 96, 26 112, 40 148 C 56 166, 94 134, 100 98 Z';

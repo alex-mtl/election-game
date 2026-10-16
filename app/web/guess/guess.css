@@ -11,6 +11,17 @@ body { display: flex; justify-content: center; }
         border: 1px solid var(--line); background: rgba(0,0,0,.35); letter-spacing: .06em; }
 #roundChip.speed { color: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 1em rgba(255,230,0,.5); }
 
+/* ---- TikTok chroma key mode: pure green top (keyed out in LIVE Studio), the game below it.
+   Flying effects (toasts, plane, butterflies, balloons) still use the whole screen; nothing green. */
+#chromaZone { display: none; }
+html.chroma #chromaZone { display: block; position: fixed; left: 0; right: 0; top: 0; height: var(--chroma-top);
+                          background: #00ff00; z-index: 0; }
+html.chroma body { background: var(--bg); }
+html.chroma #stage { padding-top: calc(var(--chroma-top) + var(--u) * 2); }
+html.chroma .overlay, html.chroma #rules { top: var(--chroma-top); }      /* winner, results, rules: game zone only */
+html.chroma { --lime: #ff4fd8; --t-warm: #fff04a; }
+html.chroma .neon-lime { text-shadow: 0 0 .25em var(--lime), 0 0 .8em rgba(255,79,216,.6); }
+
 /* ---- top ---- */
 .toprow { display: flex; align-items: center; justify-content: space-between; }
 #timer { font: 900 calc(var(--u) * 9)/1 var(--font-display); color: var(--cyan);

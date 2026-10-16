@@ -55,7 +55,7 @@ window.Balloons = (() => {
   // (pastel with a little neon) - never dark navy / green / purple
   let gid = 0;
   function svg() {
-    const id = 'bl-g' + (++gid), h = Math.floor(Math.random() * 360);
+    const id = 'bl-g' + (++gid), h = Chroma.hue(Math.floor(Math.random() * 360));
     const sat = 90 + Math.floor(Math.random() * 10);
     // blue / violet look darker at the same lightness: lift them so they stay pastel
     const up = h >= 205 && h <= 295 ? 9 : (h >= 180 && h < 205) || (h > 295 && h <= 320) ? 4 : 0;
@@ -79,7 +79,7 @@ window.Balloons = (() => {
       img.onerror = () => img.replaceWith(avatar(name, ''));
       return img;
     }
-    const hue = [...(name || '?')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+    const hue = Chroma.hue([...(name || '?')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7));
     const d = document.createElement('div');
     d.className = 'av'; d.textContent = (clean(name)[0] || '?').toUpperCase();
     d.style.background = `hsl(${hue} 85% 55%)`;

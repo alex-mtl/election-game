@@ -428,8 +428,16 @@
   const fmtClock = sec => Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
   let breakVoice = {};
 
+  // TikTok chroma key: green top zone (the camera shows through it), the game below
+  function applyChroma(top) {
+    const root = document.documentElement;
+    root.classList.toggle('chroma', top > 0);
+    if (top > 0) root.style.setProperty('--chroma-top', top + 'vh');
+  }
+
   function render(s) {
     S = s;
+    applyChroma(s.chroma || 0);
     vocab = s.vocabSize || vocab;
     $('error').hidden = !s.error;
     if (s.error) { $('errText').textContent = t('g.err') + s.error; return; }

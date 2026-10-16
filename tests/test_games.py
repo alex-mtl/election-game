@@ -375,7 +375,7 @@ class NonStopTest(unittest.TestCase):
         g.set_option("follow", 0)
         g.set_option("grace", 60)
         self.assertEqual(g.get_options(), {"pause": 30, "round_min": 20, "follow": 0, "grace": 60, "level": 2,
-                                           "hint_cd": 20})
+                                           "hint_cd": 20, "chroma": 0, "chroma_top": 33})
         self.assertFalse(g.follow_required)
         g.tick(time.time()); g.tick(time.time() + 0.01)
         self.assertAlmostEqual(g.ends_at - g.started_at, 20 * 60, delta=1)   # 20-minute round
@@ -416,6 +416,18 @@ class BalloonsTest(unittest.TestCase):
         hub.like(Viewer("mao", "Mao", ""), 100)
         self.assertTrue(any(e["type"] == "balloon" for e in hub.feed))
         self.assertIn("balloons", hub.message("guess"))
+
+
+class ChromaTest(unittest.TestCase):
+    def test_chroma_option(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        self.assertEqual(g.snapshot()["chroma"], 0)
+        g.set_option("chroma", 1)
+        self.assertEqual(g.snapshot()["chroma"], 33)
+        g.set_option("chroma_top", 40)
+        self.assertEqual(g.snapshot()["chroma"], 40)
+        g.set_option("chroma_top", 77)                      # not a choice: ignored
+        self.assertEqual(g.get_options()["chroma_top"], 40)
 
 
 class GiftReceiverTest(unittest.TestCase):
