@@ -26,6 +26,10 @@ html.chroma .overlay, html.chroma #rules { top: var(--chroma-top); }      /* win
 /* controls go under the frame (outside the stream picture): the frame fits above a 56 px strip */
 html.chroma { --u: min(calc((100vw - 2px) / 100), calc((100vh - 58px) * 0.005625)); }   /* 1% of the frame width */
 html.chroma body { height: calc(100vh - 56px); }
+/* no controls inside the frame any more: the CTA line sits on the bottom edge, the guesses get the room */
+html.chroma #stage { padding-bottom: 2px; }
+html.chroma #bottom { padding-bottom: 0; }
+html.chroma #ticker { bottom: 0; }
 /* popups live in the lower part of the camera zone, just above the game:
    hint card at its bottom edge, small notes above it (stacking up), big toasts above those */
 html.chroma { --above-game: calc(var(--u) * 177.78 - var(--chroma-top)); }
