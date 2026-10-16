@@ -297,9 +297,9 @@
       main.append(el('span', 'rk', '?'), el('span', 'wd', g.word), el('span', 'note', t('g.notInDict')));
     } else {
       bar.style.width = Math.round(closeness(g.rank) * 100) + '%';
-      main.append(bar, el('span', 'rk t-' + g.tempKey, fmt(g.rank)));
-      if (isHintWord(g.word)) main.append(el('span', 'hk', '💡'));   // this word came as a hint
-      main.append(el('span', 'wd', g.word));
+      const rk = el('span', 'rk t-' + g.tempKey, fmt(g.rank));
+      if (isHintWord(g.word)) rk.append(el('span', 'hk', '💡'));     // came as a hint: right after the rank
+      main.append(bar, rk, el('span', 'wd', g.word));
     }
     row.append(main, who);
     return row;

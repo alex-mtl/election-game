@@ -185,7 +185,7 @@ html.chroma #recent > .title { display: none; }
             padding: calc(var(--u) * 1.6) calc(var(--u) * 3); border-radius: calc(var(--u) * 2.5);
             border: 1px solid var(--yellow); background: rgba(255,230,0,.08); box-shadow: 0 0 1.2em rgba(255,230,0,.25); }
 #hintCard[hidden] { display: none; }
-.grow .main .hk { flex: none; position: relative; margin-left: calc(var(--u) * 1); font-size: .85em; }
+.grow .main .rk .hk { margin-left: calc(var(--u) * .6); font-size: 1.15em; text-shadow: none; }   /* bulb inside the rank column */
 #hintCard .hk { font: 900 calc(var(--u) * 3.2) var(--font-display); color: var(--yellow); }
 #hintCard b { font: 900 calc(var(--u) * 4.4) var(--font-display); color: var(--yellow); text-shadow: 0 0 .4em var(--yellow); }
 #hintCard.new { animation: pop .6s; }
