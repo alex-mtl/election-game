@@ -10,6 +10,7 @@ pick a winner: the first one moves PLAYING -> WINNER and the other sees WINNER.
 import math
 import os
 import random
+import re
 import time
 from collections import deque
 
@@ -27,6 +28,8 @@ CLOSE_LEVELS = [(2, "so_close"), (3, "top3"), (10, "top10"), (50, "top50"), (100
 EXACT_WINDOW_SEC = 3          # exact guesses right after the winner still make the podium
 # typed alone in chat by a viewer with hint credits: spends one credit on a close-word hint
 HINT_WORDS = {"подсказка", "hint"}
+# "my hints" in chat: the ticker tells the viewer how many hints they have on account
+MY_HINTS_WORDS = {"мои подсказки", "мои подскази", "my hints", "mes indices", "mis pistas"}
 MAX_WORDS = 5000              # cap of aggregated words per round (memory guard)
 SIM_NAMES = ["Alex", "Mike", "Sarah", "John", "Emma", "Liam", "Olivia", "Noah", "Mia", "Leo"]
 
@@ -79,6 +82,7 @@ class GuessGame(BaseGame):
     USED = "guess/used_words.json"
     ROUNDS = "guess/rounds.json"
     CREDITS = "guess/hint_credits.json"          # viewer id -> hint credits ("on account")
+    CREDITS_EVER = "guess/hint_credits_ever.json"  # everyone who ever had hints on account
 
     def __init__(self, store):
         super().__init__(store)
@@ -105,6 +109,9 @@ class GuessGame(BaseGame):
         self.used = {k: set(v) for k, v in used.items()}
         self.history = store.load(self.ROUNDS, [])
         self.credits = {k: int(v) for k, v in (store.load(self.CREDITS, {}) or {}).items() if int(v) > 0}
+        ever = store.load(self.CREDITS_EVER, None)
+        # first start: everyone with hints now, plus those known to have had (and spent) them
+        self.credits_ever = set(ever) if ever is not None else set(self.credits) | {"soniapyu", "jelenalena71"}
         self.round_id = 0
         self.difficulty = []          # (solved, seconds, best rank) of recent rounds
         self.tier = "easy"
@@ -219,6 +226,13 @@ class GuessGame(BaseGame):
 
     # ------------------------------------------------------------------ guesses
     def on_comment(self, viewer: Viewer, text: str, ts=None):
+        cmd = " ".join(re.sub(r"[^\w\s]", " ", (text or "").lower().replace("ё", "е")).split())
+        if cmd in MY_HINTS_WORDS:                        # "мои подсказки": never a guess
+            if viewer.id in self.credits_ever:
+                n = self.credits.get(viewer.id, 0)
+                self.emit("credits_info", name=viewer.name, avatar=viewer.avatar, n=n)
+                print(f"[guess] {viewer.name} asked for their hints: {n}")
+            return
         if not self.sem or self.phase not in (PLAYING, WINNER):
             return
         now = time.time()
@@ -423,6 +437,9 @@ class GuessGame(BaseGame):
         if not viewer_id:
             return 0
         left = max(0, self.credits.get(viewer_id, 0) + int(n))
+        if int(n) > 0 and viewer_id not in self.credits_ever:
+            self.credits_ever.add(viewer_id)
+            self.store.save(self.CREDITS_EVER, sorted(self.credits_ever))
         if left:
             self.credits[viewer_id] = left
         else:

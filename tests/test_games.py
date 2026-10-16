@@ -515,6 +515,26 @@ class ChampionWordsTest(unittest.TestCase):
         self.assertEqual(g.players["copy"].guesses, 1)
 
 
+class MyHintsTest(unittest.TestCase):
+    def test_my_hints_command(self):
+        store = JsonStore(tempfile.mkdtemp())
+        g = GuessGame(store)
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        events = []
+        g.emit = lambda kind, **kw: events.append((kind, kw))
+        g.add_credits("kenny", 3)
+        g.on_comment(Viewer("kenny", "Kenny", "", 1), "Мои ПОДСКАЗКИ!")
+        self.assertEqual(events[-1], ("credits_info", {"name": "Kenny", "avatar": "", "n": 3}))
+        g.add_credits("kenny", -3)                                       # spent them all: still answered
+        g.on_comment(Viewer("kenny", "Kenny", "", 1), "мои подскази")
+        self.assertEqual(events[-1][1]["n"], 0)
+        n = len(events)
+        g.on_comment(Viewer("nobody", "Nobody", "", 1), "мои подсказки")   # never had any: silence
+        self.assertEqual(len(events), n)
+        self.assertNotIn("nobody", g.players)                            # and not a guess
+        self.assertIn("kenny", GuessGame(store).credits_ever)            # remembered
+
+
 class GiftReceiverTest(unittest.TestCase):
     def test_gift_to_someone_else_gives_no_hint(self):
         from app.hub import Hub

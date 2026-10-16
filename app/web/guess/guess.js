@@ -186,6 +186,9 @@
         toast(NAME, t('g.t.streak', streakP(e.n)), 'var(--orange)', { huge: e.n >= 3, important: true, hold: e.n >= 5 ? 2.8 : 2 });
         voice(t('g.v.streak', Object.assign(streakP(e.n), { name })), 'high');
         break;
+      case 'credits_info':                       // "мои подсказки": on the ticker line
+        queueTicker(t('g.tk.credits', { name: esc(e.name), hints: I18N.n(e.n || 0, 'hint') }));
+        break;
       case 'hint_wait':
         mini(t('g.t.hintWait', { name, s: e.seconds }), 'gift');
         break;
@@ -584,9 +587,16 @@
       top.map(r => esc(r.name) + ' — ' + I18N.n(r.wins, 'win')).join(' · '));
     return parts.join('   ·   ');
   }
-  function runTicker() {
-    const html = S && tickerText(S), box = $('ticker');
-    if (!html || S.phase !== 'playing') return;
+  // one message at a time on the ticker line; others wait in a queue
+  const tickerQueue = [];
+  function queueTicker(html) {
+    if ($('bottom').classList.contains('ticking')) tickerQueue.push(html);
+    else runTicker(html);
+  }
+  function runTicker(custom) {
+    const html = custom || (S && S.phase === 'playing' && tickerText(S)), box = $('ticker');
+    if (!html) return;
+    if (!custom && $('bottom').classList.contains('ticking')) { tickerQueue.push(html); return; }
     box.replaceChildren();
     const sp = document.createElement('span');
     sp.innerHTML = html;
@@ -596,7 +606,10 @@
     sp.style.setProperty('--to', -w + 'px');
     sp.style.setProperty('--dur', ((W + w) / Math.max(120, W / 7)).toFixed(1) + 's');   // ~7 s per screen width
     $('bottom').classList.add('ticking');
-    sp.addEventListener('animationend', () => { sp.remove(); $('bottom').classList.remove('ticking'); });
+    sp.addEventListener('animationend', () => {
+      sp.remove(); $('bottom').classList.remove('ticking');
+      if (tickerQueue.length) runTicker(tickerQueue.shift());
+    });
   }
   function tickerFor(s) {
     if (s.roundId === tickerRound) return;
