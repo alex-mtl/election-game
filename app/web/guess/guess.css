@@ -24,8 +24,14 @@ html.chroma #chromaZone { display: block; position: absolute; left: 0; right: 0;
                           background: #00ff00; z-index: 0; }
 html.chroma .overlay, html.chroma #rules { top: var(--chroma-top); }      /* winner, results, rules: game zone only */
 /* controls go under the frame (outside the stream picture): the frame fits above a 56 px strip */
-html.chroma { --u: min(calc((100vw - 2px) / 100), calc((100vh - 58px) * 0.005625)); }   /* 1% of the frame width */
-html.chroma body { height: calc(100vh - 56px); }
+/* outer 9:16 frame around everything: the game frame on top, the controls under it, its bottom edge
+   3 px below them. In u: game 100 x 177.78, gap 1, controls 6.5, then 3 px -> outer height 185.28u + 3px,
+   width = height * 9/16. --u is 1% of the game frame width, sized so the outer frame fits the window. */
+html.chroma { --u: min(calc((100vw - 4px) / 104.22), calc((100vh - 5px) / 185.28)); }
+html.chroma #outer { position: relative; flex: none; display: flex; justify-content: center; align-items: flex-start;
+                     width: calc(var(--u) * 104.22 + 1.69px); height: calc(var(--u) * 185.28 + 3px);
+                     outline: 1px solid #00ff00; }
+html.chroma #outer .ctl-bar { position: absolute; left: 50%; right: auto; bottom: 3px; transform: translateX(-50%); }
 /* no controls inside the frame any more: the CTA line sits on the bottom edge, the guesses get the room */
 html.chroma #stage { padding-bottom: 2px; }
 html.chroma #bottom { padding-bottom: 0; }
@@ -44,7 +50,7 @@ html.chroma #bigNum { inset: 0 0 auto 0; height: var(--chroma-top); }
 html.chroma .mini { background: rgb(10, 0, 25); }
 html.chroma .tcard { background: rgb(8, 0, 20); }
 /* welcome pill: top of the camera zone (it is fixed to the window, the frame is centred above the controls) */
-html.chroma .greet { bottom: auto; top: calc((100vh - 56px - var(--u) * 177.78) / 2 + var(--u) * 4); }
+html.chroma .greet { bottom: auto; top: calc((100vh - var(--u) * 185.28 - 3px) / 2 + var(--u) * 4); }
 html.chroma { --lime: #ff4fd8; --t-warm: #fff04a; }
 html.chroma .neon-lime { text-shadow: 0 0 .25em var(--lime), 0 0 .8em rgba(255,79,216,.6); }
 

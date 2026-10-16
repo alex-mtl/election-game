@@ -434,7 +434,19 @@
     root.classList.toggle('chroma', top > 0);
     if (top > 0) root.style.setProperty('--chroma-top', `calc(var(--u) * ${(1.7778 * top).toFixed(2)})`);  // % of the frame
     const zone = $('chromaZone'), stage = $('stage');
-    if (zone.parentNode !== stage) stage.prepend(zone);   // the green zone is the top of the frame
+    if (top > 0) {
+      if (zone.parentNode !== stage) stage.prepend(zone);   // the green zone is the top of the frame
+      let outer = $('outer');                              // the outer 9:16 frame: game + controls
+      if (!outer) {
+        outer = document.createElement('div'); outer.id = 'outer';
+        stage.parentNode.insertBefore(outer, stage);
+        outer.appendChild(stage);
+      }
+      const bar = document.querySelector('.ctl-bar');
+      if (bar && bar.parentNode !== outer) outer.appendChild(bar);
+    } else if ($('outer')) {
+      location.reload();                                   // back to the normal layout
+    }
   }
 
   function render(s) {
