@@ -29,7 +29,8 @@ EXACT_WINDOW_SEC = 3          # exact guesses right after the winner still make 
 # typed alone in chat by a viewer with hint credits: spends one credit on a close-word hint
 HINT_WORDS = {"подсказка", "hint"}
 # "my hints" in chat: the ticker tells the viewer how many hints they have on account
-MY_HINTS_WORDS = {"мои подсказки", "мои подскази", "my hints", "mes indices", "mis pistas"}
+MY_HINTS_WORDS = {"мои подсказки", "мои подскази", "какие подсказки", "сколько подсказок",
+                  "my hints", "mes indices", "mis pistas"}
 MAX_WORDS = 5000              # cap of aggregated words per round (memory guard)
 SIM_NAMES = ["Alex", "Mike", "Sarah", "John", "Emma", "Liam", "Olivia", "Noah", "Mia", "Leo"]
 
