@@ -54,16 +54,17 @@ html.chroma #bigNum { inset: 0 0 auto 0; height: var(--chroma-top); }
    Avatars as big as TikTok's own viewer avatars (~7% of the width), overlapping when tied */
 #champs, #likers { display: none; }
 html.chroma #likers { display: flex; position: absolute; left: calc(var(--u) * 2.8); z-index: 7;
-                      bottom: calc(var(--above-game) - var(--u) * 1); flex-direction: column; align-items: flex-start;
-                      gap: calc(var(--u) * 1.6); pointer-events: none; }
-.champ.liker { padding: calc(var(--u) * .5) calc(var(--u) * .5) calc(var(--u) * .5) calc(var(--u) * 2.2); }
+                      bottom: calc(var(--above-game) - var(--u) * 1.7); flex-direction: column; align-items: flex-start;
+                      gap: calc(var(--u) * .5); pointer-events: none; }
+.champ.liker { padding: calc(var(--u) * .25) calc(var(--u) * .25) calc(var(--u) * .25) calc(var(--u) * 2.2); }
 .champ.liker .cn { padding-right: calc(var(--u) * 1.6); }
 .champ.liker .cm { font-size: calc(var(--u) * 4.4); }
 html.chroma #champs { display: flex; position: absolute; right: calc(var(--u) * 2.8); z-index: 7;
-                      bottom: calc(var(--above-game) - var(--u) * 1); flex-direction: column; align-items: flex-end;
-                      gap: calc(var(--u) * 1.6); pointer-events: none; }
+                      bottom: calc(var(--above-game) - var(--u) * 1.7); flex-direction: column; align-items: flex-end;
+                      gap: calc(var(--u) * .5); pointer-events: none; }
+/* dense columns: little space between and inside the lines, right on top of the timer row */
 .champ { display: flex; align-items: center; gap: calc(var(--u) * 1.6); border-radius: 999px;
-         padding: calc(var(--u) * .5) calc(var(--u) * 2.2) calc(var(--u) * .5) calc(var(--u) * .5); background: rgba(0, 0, 0, .40); }
+         padding: calc(var(--u) * .25) calc(var(--u) * 2.2) calc(var(--u) * .25) calc(var(--u) * .25); background: rgba(0, 0, 0, .40); }
 html.chroma:not(.alpha) .champ { background: rgb(10, 0, 25); }          /* opaque over the green key */
 .champ .av { width: calc(var(--u) * 7.2); height: calc(var(--u) * 7.2); font-size: calc(var(--u) * 3.2);
              border: calc(var(--u) * .4) solid #fff; flex: none; }
