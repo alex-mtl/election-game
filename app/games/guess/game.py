@@ -73,7 +73,8 @@ class GuessGame(BaseGame):
                "level": [1, 2],                    # dictionary: 1 easy (any word), 2 normal (nouns)
                "hint_cd": [5, 10, 15, 20],         # seconds between two hints of the same viewer
                "chroma": [0, 1],                   # TikTok chroma key: green top for the streamer's camera
-               "chroma_top": [25, 33, 40, 50]}     # height of that green zone, % of the screen
+               "chroma_top": [25, 33, 40, 50],     # height of that green zone, % of a 9:16 screen
+               "frame": [16, 19.5, 20]}            # frame 9:16 / 9:19.5 (phones) / 9:20, the extra height is the game's
     STATE = "guess/state.json"
     USED = "guess/used_words.json"
     ROUNDS = "guess/rounds.json"
@@ -95,6 +96,7 @@ class GuessGame(BaseGame):
         self.level = self.round_level = 2            # dictionary level, from the next round
         self.hint_cd = 20                            # a viewer's next hint (gift or credit) after this many s
         self.chroma, self.chroma_top = False, 33     # green zone on top (keyed out in TikTok LIVE Studio)
+        self.frame = 16                              # frame format 9:frame
         self.hint_t = {}                             # viewer id -> time of their last hint
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
@@ -491,6 +493,8 @@ class GuessGame(BaseGame):
             self.chroma = bool(value)
         elif key == "chroma_top" and int(value) in self.OPTIONS["chroma_top"]:
             self.chroma_top = int(value)
+        elif key == "frame" and float(value) in self.OPTIONS["frame"]:
+            self.frame = float(value) if float(value) % 1 else int(value)
         elif key == "level" and int(value) in self.OPTIONS["level"]:
             self.level = int(value)                      # from the next round
         self.dirty = True
@@ -499,7 +503,7 @@ class GuessGame(BaseGame):
         return {"pause": self.pause_sec, "round_min": self.round_sec // 60,
                 "follow": int(self.follow_required), "grace": int(self.follow_grace),
                 "level": self.level, "hint_cd": self.hint_cd,
-                "chroma": int(self.chroma), "chroma_top": self.chroma_top}
+                "chroma": int(self.chroma), "chroma_top": self.chroma_top, "frame": self.frame}
 
     @property
     def reveal_sec(self):
@@ -688,6 +692,7 @@ class GuessGame(BaseGame):
             "lastRound": self.history[-1] if self.history else None,    # for the ticker
             "chroma": self.chroma_top if self.chroma else 0,              # % of the screen, 0 = off
             "chromaTop": self.chroma_top,                                 # TT mode (?tt=1) always uses it
+            "frame": self.frame,                                          # 9:frame
             "streak": self.stats.top_streak(),
             "vocabSize": self.sem.size if self.sem else 0,
             "temps": dict(zip(TEMPS, config.TEMPERATURE_BOUNDS + [None])),

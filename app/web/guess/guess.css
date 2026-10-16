@@ -17,7 +17,8 @@ body { display: flex; justify-content: center; }
    window: it only scales as a whole, it never stretches to the window's width or height. */
 #chromaZone { display: none; }
 html.chroma body { background: #000; align-items: center; }
-html.chroma #stage { width: calc(var(--u) * 100); height: calc(var(--u) * 177.78); flex: none;
+html.chroma { --fh: 177.78; --fr: 1.7778; }   /* frame height in u and height/width: 9:16 (9:19.5, 9:20 from the setting) */
+html.chroma #stage { width: calc(var(--u) * 100); height: calc(var(--u) * var(--fh)); flex: none;
                      outline: 1px solid #00ff00;   /* keyed out in Studio together with the green zone */ background: radial-gradient(120% 80% at 50% 0%, #1d0640 0%, var(--bg) 55%);
                      padding-top: calc(var(--chroma-top) + var(--u) * 2); }
 html.chroma #chromaZone { display: block; position: absolute; left: 0; right: 0; top: 0; height: var(--chroma-top);
@@ -25,11 +26,11 @@ html.chroma #chromaZone { display: block; position: absolute; left: 0; right: 0;
 html.chroma .overlay, html.chroma #rules { top: var(--chroma-top); }      /* winner, results, rules: game zone only */
 /* controls go under the frame (outside the stream picture): the frame fits above a 56 px strip */
 /* outer 9:16 frame around everything: the game frame on top, the controls under it, its bottom edge
-   3 px below them. In u: game 100 x 177.78, gap 1, controls 6.5, then 3 px -> outer height 185.28u + 3px,
-   width = height * 9/16. --u is 1% of the game frame width, sized so the outer frame fits the window. */
-html.chroma { --u: min(calc((100vw - 4px) / 104.22), calc((100vh - 5px) / 185.28)); }
+   3 px below them. In u: game 100 x fh, gap 1, controls 6.5, then 3 px -> outer height (fh + 7.5)u + 3px,
+   width = height / fr. --u is 1% of the game frame width, sized so the outer frame fits the window. */
+html.chroma { --u: min(calc((100vw - 4px) / ((var(--fh) + 7.5) / var(--fr))), calc((100vh - 5px) / (var(--fh) + 7.5))); }
 html.chroma #outer { position: relative; flex: none; display: flex; justify-content: center; align-items: flex-start;
-                     width: calc(var(--u) * 104.22 + 1.69px); height: calc(var(--u) * 185.28 + 3px);
+                     width: calc((var(--u) * (var(--fh) + 7.5) + 3px) / var(--fr)); height: calc(var(--u) * (var(--fh) + 7.5) + 3px);
                      outline: 1px solid #00ff00; }
 html.chroma #outer .ctl-bar { position: absolute; left: 50%; right: auto; bottom: 3px; transform: translateX(-50%); }
 /* no controls inside the frame any more: the CTA line sits on the bottom edge, the guesses get the room */
@@ -38,7 +39,7 @@ html.chroma #bottom { padding-bottom: 0; }
 html.chroma #ticker { bottom: 0; }
 /* popups live in the lower part of the camera zone, just above the game:
    hint card at its bottom edge, small notes above it (stacking up), big toasts above those */
-html.chroma { --above-game: calc(var(--u) * 177.78 - var(--chroma-top)); }
+html.chroma { --above-game: calc(var(--u) * var(--fh) - var(--chroma-top)); }
 html.chroma #events { min-height: 0; position: static; }   /* the hint card is placed against the frame */
 html.chroma #hintCard { position: absolute; left: calc(var(--u) * 3); right: calc(var(--u) * 3); width: auto; z-index: 6;
                         bottom: calc(var(--above-game) + var(--u) * 1.5); padding: calc(var(--u) * 1.6) calc(var(--u) * 3);
@@ -50,11 +51,11 @@ html.chroma #bigNum { inset: 0 0 auto 0; height: var(--chroma-top); }
 html.chroma .mini { background: rgb(10, 0, 25); }
 html.chroma .tcard { background: rgb(8, 0, 20); }
 /* welcome pill: top of the camera zone (it is fixed to the window, the frame is centred above the controls) */
-html.chroma .greet { bottom: auto; top: calc((100vh - var(--u) * 185.28 - 3px) / 2 + var(--u) * 4); }
+html.chroma .greet { bottom: auto; top: calc((100vh - var(--u) * (var(--fh) + 7.5) - 3px) / 2 + var(--u) * 4); }
 /* TT mode: just the 9:16 game frame filling the source / window, no controls, no outer frame */
-html.chroma.tt { --u: min(calc((100vw - 2px) / 100), calc((100vh - 2px) * 0.005625)); }
+html.chroma.tt { --u: min(calc((100vw - 2px) / 100), calc((100vh - 2px) / var(--fh))); }
 html.tt .ctl-bar { display: none; }
-html.chroma.tt .greet { top: calc((100vh - var(--u) * 177.78) / 2 + var(--u) * 4); }
+html.chroma.tt .greet { top: calc((100vh - var(--u) * var(--fh)) / 2 + var(--u) * 4); }
 html.chroma { --lime: #ff4fd8; --t-warm: #fff04a; }
 html.chroma .neon-lime { text-shadow: 0 0 .25em var(--lime), 0 0 .8em rgba(255,79,216,.6); }
 

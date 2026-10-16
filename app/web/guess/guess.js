@@ -437,10 +437,14 @@
   // a bare 9:16 frame, no controls.
   const TT = new URLSearchParams(location.search).get('tt') === '1';
   if (TT) document.documentElement.classList.add('tt');
-  function applyChroma(top) {
+  function applyChroma(top, frame) {
     const root = document.documentElement;
     root.classList.toggle('chroma', top > 0);
-    if (top > 0) root.style.setProperty('--chroma-top', `calc(var(--u) * ${(1.7778 * top).toFixed(2)})`);  // % of the frame
+    // the green zone keeps its 9:16 height (top % of a 9:16 frame); a taller frame (9:19.5, 9:20)
+    // gives all the extra height to the game
+    if (top > 0) root.style.setProperty('--chroma-top', `calc(var(--u) * ${(1.7778 * top).toFixed(2)})`);
+    root.style.setProperty('--fh', (100 * frame / 9).toFixed(2));
+    root.style.setProperty('--fr', (frame / 9).toFixed(4));
     const zone = $('chromaZone'), stage = $('stage');
     if (top > 0) {
       if (zone.parentNode !== stage) stage.prepend(zone);   // the green zone is the top of the frame
@@ -459,7 +463,7 @@
 
   function render(s) {
     S = s;
-    applyChroma(TT ? (s.chroma || s.chromaTop || 33) : (s.chroma || 0));
+    applyChroma(TT ? (s.chroma || s.chromaTop || 33) : (s.chroma || 0), s.frame || 16);
     vocab = s.vocabSize || vocab;
     $('error').hidden = !s.error;
     if (s.error) { $('errText').textContent = t('g.err') + s.error; return; }

@@ -375,7 +375,8 @@ class NonStopTest(unittest.TestCase):
         g.set_option("follow", 0)
         g.set_option("grace", 60)
         self.assertEqual(g.get_options(), {"pause": 30, "round_min": 20, "follow": 0, "grace": 60, "level": 2,
-                                           "hint_cd": 20, "chroma": 0, "chroma_top": 33})
+                                           "hint_cd": 20, "chroma": 0, "chroma_top": 33,
+                                           "frame": 16})
         self.assertFalse(g.follow_required)
         g.tick(time.time()); g.tick(time.time() + 0.01)
         self.assertAlmostEqual(g.ends_at - g.started_at, 20 * 60, delta=1)   # 20-minute round
@@ -428,6 +429,10 @@ class ChromaTest(unittest.TestCase):
         self.assertEqual(g.snapshot()["chroma"], 40)
         g.set_option("chroma_top", 77)                      # not a choice: ignored
         self.assertEqual(g.get_options()["chroma_top"], 40)
+        g.set_option("frame", 19.5)
+        self.assertEqual(g.snapshot()["frame"], 19.5)
+        g.set_option("frame", 17)                           # not a choice: ignored
+        self.assertEqual(g.get_options()["frame"], 19.5)
 
 
 class TTLauncherTest(unittest.TestCase):
