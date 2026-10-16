@@ -479,6 +479,40 @@ class LikersTest(unittest.TestCase):
             config.PLANE_AUTO_LIKES, config.LIKES_PER_BALLOON = saved
 
 
+class ChampionWordsTest(unittest.TestCase):
+    def test_champions_send_up_to_three_words(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        for pid, w in (("ann", 3), ("bob", 2), ("cat", 2), ("dan", 1), ("eve", 0)):
+            g.stats.get(pid, pid.title(), "")["wins"] = w
+        words = [w for w in ("water", "fire", "house", "tree") if w != g.secret]
+        g.on_comment(Viewer("cat", "Cat", "", 1), " ".join(words[:3]))         # 2nd place (tie): 3 words
+        self.assertEqual(g.players["cat"].guesses, 3)
+        g.on_comment(Viewer("dan", "Dan", "", 1), "the " + words[3] + " " + words[0])   # 3rd place: article dropped
+        self.assertEqual(g.players["dan"].guesses, 2)
+        g.on_comment(Viewer("eve", "Eve", "", 1), words[0] + " " + words[1])    # not a champion: ignored
+        self.assertNotIn("eve", g.players)
+        g.on_comment(Viewer("ann", "Ann", "", 1), " ".join(words))              # 4 words: not a guess
+        self.assertNotIn("ann", g.players)
+
+    def test_round_champions_send_up_to_three_words(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        r = lambda k: g.sem.words[int(g.order[k])]                  # the k+1-th closest word
+        first, copycat, other = Viewer("first", "First", "", 1), Viewer("copy", "Copy", "", 1), Viewer("o", "O", "", 1)
+        g.on_comment(first, r(10))
+        g.on_comment(copycat, r(10))                                 # same word, later: no advantage
+        g.on_comment(other, r(500))
+        self.assertIn("first", g._round_champion_ids())
+        self.assertNotIn("copy", g._round_champion_ids())
+        g.players["first"].last_t = 0
+        g.on_comment(first, r(20) + " " + r(30))                     # round champion: both words count
+        self.assertEqual(g.players["first"].guesses, 3)
+        g.players["copy"].last_t = 0
+        g.on_comment(copycat, r(40) + " " + r(50))                   # not a champion: ignored
+        self.assertEqual(g.players["copy"].guesses, 1)
+
+
 class GiftReceiverTest(unittest.TestCase):
     def test_gift_to_someone_else_gives_no_hint(self):
         from app.hub import Hub

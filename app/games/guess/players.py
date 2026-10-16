@@ -104,6 +104,11 @@ class SessionStats:
                         "players": [{"name": s["name"], "avatar": s["avatar"]} for s in ps[:per_place]]})
         return out
 
+    def champion_ids(self, places=3):
+        """Ids of everyone on the stream's 1st-3rd place by wins (ties share the place)."""
+        counts = sorted({s["wins"] for s in self.players.values() if s["wins"]}, reverse=True)[:places]
+        return {pid for pid, s in self.players.items() if s["wins"] and s["wins"] in counts}
+
     def top_streak(self):
         best = max(self.players.values(), key=lambda s: s["streak"], default=None)
         return {"name": best["name"], "n": best["streak"]} if best and best["streak"] >= 2 else None

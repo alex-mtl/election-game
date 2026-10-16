@@ -226,6 +226,19 @@ class GuessGame(BaseGame):
         if self.phase == PLAYING and self.credits.get(viewer.id, 0) > 0                 and (text or "").strip(" !.?").lower().replace("ё", "е") in HINT_WORDS                 and not (ts and ts < self.started_at - 3):
             self.use_credit(viewer, now)
             return
+        # stream champions (1st-3rd place by wins, ties included) and round champions (whoever named
+        # the 1st, 2nd and 3rd word of the table first) may send up to 3 words at once: each word
+        # counts as their own guess (the per-player pause doesn't split them)
+        if self.phase == PLAYING and (viewer.id in self.stats.champion_ids()
+                                      or viewer.id in self._round_champion_ids()):
+            several = self.sem.split_words(text)
+            if several:
+                for i, w in enumerate(several):
+                    p = self.players.get(viewer.id)
+                    if i and p:
+                        p.last_t = 0
+                    self.on_comment(viewer, w, ts)
+                return
         word, raw = self.sem.normalize(text)
         if raw is not None and ts and self.phase == PLAYING and ts < self.started_at - 3:
             # typed before this round started (break / countdown) but delivered late by TikTok
@@ -649,6 +662,18 @@ class GuessGame(BaseGame):
                 "count": g["count"], "name": g.get("last") or g["name"], "first": g["name"],
                 "avatar": g.get("last_avatar", g["avatar"]),
                 "pendingUntil": p.pending_until if p and p.pending_until else 0}
+
+    def _round_champion_ids(self):
+        """Who named the round's three best words first (later namers of the same word don't count)."""
+        out = []
+        for g in sorted((g for g in self.guesses.values() if g["rank"] > 1 and self._visible(g)),
+                        key=lambda g: g["rank"]):
+            first = next((i for i in g.get("ids", []) if not (self.players.get(i) and self.players[i].dq)), None)
+            if first:
+                out.append(first)
+            if len(out) == 3:
+                break
+        return set(out)
 
     def _visible(self, g):
         """Hide words only guessed by players removed for not following."""

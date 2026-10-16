@@ -62,6 +62,18 @@ class SemanticIndex:
             return lemma, raw
         return None, raw
 
+    def split_words(self, text, limit=3):
+        """A message of 2..limit words (letters only, no digits) -> the words, else None."""
+        text = (text or "")[:120].strip().lower().replace("ё", "е").replace("’", "'")
+        if re.search(r"[0-9]", text):
+            return None
+        letters = LETTERS.get(self.lang, "a-z")
+        tokens = re.findall(rf"[{letters}]+(?:['-][{letters}]+)*", text)
+        if self.lang == "fr":
+            tokens = [ELISION.sub("", t) for t in tokens]
+        tokens = [t for t in tokens if t not in ARTICLES.get(self.lang, ())]
+        return tokens if 2 <= len(tokens) <= limit else None
+
     def ranking(self, secret):
         """rank[i] = 1-based position of vocab word i by similarity to secret."""
         sims = self.emb @ self.emb[self.index[secret]]
