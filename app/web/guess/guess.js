@@ -446,6 +446,7 @@
     // the green zone is top % of the frame's real height (9:16, 9:19.5 or 9:20)
     if (top > 0) root.style.setProperty('--chroma-top', `calc(var(--u) * ${(100 * frame / 9 * top / 100).toFixed(2)})`);
     root.style.setProperty('--fh', (100 * frame / 9).toFixed(2));
+    if (ALPHA) root.style.setProperty('--game-bg-top', $('recent').offsetTop + 'px');   // below the top row
     root.style.setProperty('--fr', (frame / 9).toFixed(4));
     const zone = $('chromaZone'), stage = $('stage');
     if (top > 0) {
