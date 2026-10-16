@@ -459,6 +459,26 @@ class ChampionsTest(unittest.TestCase):
         self.assertIn("champions", g.snapshot())
 
 
+class LikersTest(unittest.TestCase):
+    def test_planes_and_balloon_places(self):
+        from app.reactions.balloons import LikeBalloons
+        saved = config.PLANE_AUTO_LIKES, config.LIKES_PER_BALLOON
+        try:
+            config.PLANE_AUTO_LIKES, config.LIKES_PER_BALLOON = 1000, 100
+            lb = LikeBalloons(JsonStore(tempfile.mkdtemp()))
+            for pid, likes in (("ded", 12500), ("a", 4200), ("b", 4900), ("m", 2100), ("x", 1500),
+                               ("lena", 760), ("z", 120)):
+                lb.on_like(Viewer(pid, pid.upper(), ""), likes)
+            l = lb.likers()
+            self.assertEqual([g["count"] for g in l["planes"]], [12, 4, 2])     # 4 planes: a and b tie
+            self.assertEqual(l["planes"][1]["n"], 2)
+            self.assertEqual(l["balloon"]["count"], 7)                          # 760 likes, no plane yet
+            self.assertEqual(l["balloon"]["players"][0]["name"], "LENA")
+            self.assertIn("likers", lb.snapshot())
+        finally:
+            config.PLANE_AUTO_LIKES, config.LIKES_PER_BALLOON = saved
+
+
 class GiftReceiverTest(unittest.TestCase):
     def test_gift_to_someone_else_gives_no_hint(self):
         from app.hub import Hub

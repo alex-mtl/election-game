@@ -52,7 +52,13 @@ html.chroma #toast { top: auto; bottom: calc(var(--above-game) + var(--u) * 24);
 html.chroma #bigNum { inset: 0 0 auto 0; height: var(--chroma-top); }
 /* stream champions: right edge of the camera zone, right above the round / timer / players row.
    Avatars as big as TikTok's own viewer avatars (~7% of the width), overlapping when tied */
-#champs { display: none; }
+#champs, #likers { display: none; }
+html.chroma #likers { display: flex; position: absolute; left: calc(var(--u) * 2.8); z-index: 7;
+                      bottom: calc(var(--above-game) - var(--u) * 1); flex-direction: column; align-items: flex-start;
+                      gap: calc(var(--u) * 1.6); pointer-events: none; }
+.champ.liker { padding: calc(var(--u) * .5) calc(var(--u) * .5) calc(var(--u) * .5) calc(var(--u) * 2.2); }
+.champ.liker .cn { padding-right: calc(var(--u) * 1.6); }
+.champ.liker .cm { font-size: calc(var(--u) * 4.4); }
 html.chroma #champs { display: flex; position: absolute; right: calc(var(--u) * 2.8); z-index: 7;
                       bottom: calc(var(--above-game) - var(--u) * 1); flex-direction: column; align-items: flex-end;
                       gap: calc(var(--u) * 1.6); pointer-events: none; }
@@ -68,9 +74,10 @@ html.chroma:not(.alpha) .champ { background: rgb(10, 0, 25); }          /* opaqu
              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .champ .cw { font: 800 calc(var(--u) * 3.8) var(--font-text); color: #fff; }
 .champ .cm { font-size: calc(var(--u) * 5); line-height: 1; }
-/* with champions on the right, popups at the bottom of the camera zone keep to the left part */
-html.chroma.has-champs #hintCard { right: 40%; }
-html.chroma.has-champs #miniToasts, html.chroma.has-champs #toast { right: 38%; }
+/* popups at the bottom of the camera zone sit above the side columns (--cols-h, set by guess.js) */
+html.chroma #hintCard { bottom: calc(var(--above-game) + var(--cols-h, 0px) + var(--u) * 1.5); }
+html.chroma #miniToasts { bottom: calc(var(--above-game) + var(--cols-h, 0px) + var(--u) * 12); }
+html.chroma #toast { bottom: calc(var(--above-game) + var(--cols-h, 0px) + var(--u) * 24); }
 /* over the green they must be opaque: half-transparent pixels would be half keyed out */
 html.chroma .mini { background: rgb(10, 0, 25); }
 html.chroma .tcard { background: rgb(8, 0, 20); }

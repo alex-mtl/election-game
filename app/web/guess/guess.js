@@ -320,7 +320,6 @@
   function renderChamps(groups) {
     const box = $('champs');
     const key = JSON.stringify(groups);
-    document.documentElement.classList.toggle('has-champs', groups.length > 0);
     if (key === champsKey) return;
     champsKey = key;
     box.replaceChildren();
@@ -337,6 +336,38 @@
       row.append(el('span', 'cw', String(g.wins)), el('span', 'cm', ['🥇', '🥈', '🥉'][i]));
       box.append(row);
     });
+    sideColumns();
+  }
+
+  // top likers (chroma / TT mode), left side mirrored: icon, count, avatar(s), nick when alone
+  let likersKey = '';
+  function renderLikers(l) {
+    const rows = l ? [...(l.planes || []).map(g => ['✈️', g]), ...(l.balloon ? [['🎈', l.balloon]] : [])] : [];
+    const key = JSON.stringify(rows);
+    if (key !== likersKey) {
+      likersKey = key;
+      const box = $('likers');
+      box.replaceChildren();
+      rows.forEach(([icon, g]) => {
+        const row = el('div', 'champ liker');
+        row.append(el('span', 'cm', icon), el('span', 'cw', String(g.count)));
+        if (g.n === 1) {
+          row.append(avatar(g.players[0].name, g.players[0].avatar), el('span', 'cn', g.players[0].name));
+        } else {
+          const stack = el('span', 'stack');
+          g.players.slice(0, 3).forEach(p => stack.append(avatar(p.name, p.avatar)));
+          if (g.n > 3) stack.append(el('span', 'more', '+' + (g.n - 3)));
+          row.append(stack);
+        }
+        box.append(row);
+      });
+    }
+    sideColumns();
+  }
+  // popups at the bottom of the camera zone go above both side columns (champions, likers)
+  function sideColumns() {
+    const h = Math.max($('champs').offsetHeight, $('likers').offsetHeight);
+    document.documentElement.style.setProperty('--cols-h', (h ? h + 6 : 0) + 'px');
   }
 
   function renderGuesses(best) {
@@ -650,7 +681,8 @@
   // (above the hint / call to action) and lifts off at 100 likes
   Balloons.mount({ ground: true, area: $('stage'), bottom: 'calc(var(--u) * 26)',
                    width: 'calc(var(--u) * 20)', sound: true });
-  Live.start({ game: 'guess', onState: (s, msg) => { render(s); Balloons.render(msg.balloons); }, onEvent,
+  Live.start({ game: 'guess', onState: (s, msg) => { render(s); Balloons.render(msg.balloons);
+                                                    renderLikers((msg.balloons || {}).likers); }, onEvent,
                onFeed: e => {
                  if (e.type === 'balloon') Balloons.launch(e);
                  else if (e.type === 'plane') Plane.fly(e, { sound: true });
