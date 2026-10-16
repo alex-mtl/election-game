@@ -102,6 +102,11 @@ html.alpha #stage { background: transparent; outline: none; isolation: isolate; 
 html.alpha #stage::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; top: var(--game-bg-top, var(--chroma-top));
                             background: radial-gradient(120% 80% at 50% 0%, #1d0640 0%, var(--bg) 55%); z-index: -1; }
 html.alpha #chromaZone { background: transparent; }
+/* alpha: the timer row sits inside the camera zone, at its bottom; the side columns and the hint go
+   up by the same height so they stay on top of it */
+html.alpha #top { margin-top: calc(-1 * var(--toprow, 0px)); }
+html.alpha #champs, html.alpha #likers { bottom: calc(var(--above-game) + var(--toprow, 0px) - var(--u) * 1.7); }
+html.alpha #hintCard { bottom: calc(var(--above-game) + var(--toprow, 0px) + var(--u) * 1.5); }
 
 /* ---- top ---- */
 .toprow { display: flex; align-items: center; justify-content: space-between; }
