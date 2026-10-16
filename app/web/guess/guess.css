@@ -24,6 +24,7 @@ html.chroma #stage { width: calc(var(--u) * 100); height: calc(var(--u) * var(--
 html.chroma #chromaZone { display: block; position: absolute; left: 0; right: 0; top: 0; height: var(--chroma-top);
                           background: #00ff00; z-index: 0; }
 html.chroma .overlay, html.chroma #rules { top: var(--chroma-top); }      /* winner, results, rules: game zone only */
+html.alpha .overlay, html.alpha #rules { top: var(--game-bg-top, var(--chroma-top)); }   /* alpha: below the timer row too */
 /* controls go under the frame (outside the stream picture): the frame fits above a 56 px strip */
 /* outer 9:16 frame around everything: the game frame on top, the controls under it, its bottom edge
    3 px below them. In u: game 100 x fh, gap 1, controls 6.5, then 3 px -> outer height (fh + 7.5)u + 3px,
