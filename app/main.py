@@ -39,6 +39,8 @@ async def run(simulate):
 
 
 def main():
+    from .logfile import install
+    install(config.DATA_DIR)                     # the log also goes to data/logs/YYYY-MM-DD.log
     ap = argparse.ArgumentParser()
     ap.add_argument("--simulate", action="store_true", help="fake viewers instead of TikTok")
     args = ap.parse_args()

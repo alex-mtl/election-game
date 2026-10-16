@@ -539,6 +539,28 @@ class MyHintsTest(unittest.TestCase):
         self.assertEqual(events[-1][1]["n"], 0)
 
 
+class JournalTest(unittest.TestCase):
+    def test_gift_journal_and_daily_log(self):
+        import io, json as _json
+        from app.hub import Hub
+        from app.logfile import DailyTee
+        d = tempfile.mkdtemp()
+        saved = config.DATA_DIR
+        try:
+            config.DATA_DIR = d
+            hub = Hub(JsonStore(d))
+            hub.gift(Viewer("nina", "Nina", ""), "Rose", 3)
+            rows = [_json.loads(x) for x in open(os.path.join(d, "gifts.jsonl"), encoding="utf-8")]
+            self.assertEqual((rows[-1]["id"], rows[-1]["gift"], rows[-1]["count"]), ("nina", "Rose", 3))
+            tee = DailyTee(io.StringIO(), os.path.join(d, "logs"))
+            tee.write("[gift] hello\n")
+            logs = os.listdir(os.path.join(d, "logs"))
+            self.assertEqual(len(logs), 1)
+            self.assertIn("[gift] hello", open(os.path.join(d, "logs", logs[0]), encoding="utf-8").read())
+        finally:
+            config.DATA_DIR = saved
+
+
 class GiftReceiverTest(unittest.TestCase):
     def test_gift_to_someone_else_gives_no_hint(self):
         from app.hub import Hub

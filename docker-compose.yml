@@ -12,6 +12,7 @@ services:
     environment:
       PORT: 8765
       DATA_DIR: /data
+      TZ: ${TZ:-America/Toronto}         # time in data/logs (set TZ in .env for another zone)
     volumes:
       - ./data:/data
     ports:

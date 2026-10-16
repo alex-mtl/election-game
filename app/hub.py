@@ -3,6 +3,7 @@ runs ticks/simulation, saves state and pushes updates to overlays."""
 
 import asyncio
 import json
+import os
 import random
 import time
 from collections import deque
@@ -138,10 +139,22 @@ class Hub:
         """A gift on the stream. Only gifts to the host count in the game (hints); a gift to a guest
         or co-host on the same live is just shown."""
         self._feed(type="gift", name=v.name, avatar=v.avatar, gift=gift, count=count, to=to)
+        self._journal_gift(v, gift, count, to)
         if to and to.lower() != config.TIKTOK_USERNAME.lower():
             print(f"[gift] {v.name}: {gift} went to @{to}, not to the host -> no game action")
             return
         self.game.on_gift(v, gift, count)
+
+    def _journal_gift(self, v, gift, count, to):
+        """Every gift, one JSON line in data/gifts.jsonl (kept across rebuilds: the data folder is mounted)."""
+        try:
+            line = json.dumps({"t": int(time.time()), "time": time.strftime("%Y-%m-%d %H:%M:%S"), "id": v.id,
+                               "name": v.name, "gift": gift, "count": count, "to": to or None,
+                               "game": self.active}, ensure_ascii=False)
+            with open(os.path.join(config.DATA_DIR, "gifts.jsonl"), "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+        except Exception as e:
+            print(f"[gift] journal error: {e}")
 
     def follow(self, v: Viewer):
         self.game.on_follow(v)
