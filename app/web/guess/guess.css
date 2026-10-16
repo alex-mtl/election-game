@@ -37,6 +37,8 @@ html.chroma #outer .ctl-bar { position: absolute; left: 50%; right: auto; bottom
 html.chroma #stage { padding-bottom: 2px; }
 html.chroma #bottom { padding-bottom: 0; }
 html.chroma #ticker { bottom: 0; }
+/* like balloons inflate right on the bottom edge of the frame (the controls are outside it) */
+html.chroma #stage .bl-ground { bottom: 2px !important; }
 /* popups live in the lower part of the camera zone, just above the game:
    hint card at its bottom edge, small notes above it (stacking up), big toasts above those */
 html.chroma { --above-game: calc(var(--u) * var(--fh) - var(--chroma-top)); }
