@@ -435,8 +435,11 @@
   // TikTok chroma key: green top zone (the camera shows through it), the game below.
   // TT mode (?tt=1, for TikTok LIVE Studio's Link source or the .bat launcher): always like that,
   // a bare 9:16 frame, no controls.
-  const TT = new URLSearchParams(location.search).get('tt') === '1';
+  const QS = new URLSearchParams(location.search);
+  const ALPHA = QS.get('alpha') === '1';                  // transparent camera zone instead of green
+  const TT = QS.get('tt') === '1' || ALPHA;
   if (TT) document.documentElement.classList.add('tt');
+  if (ALPHA) document.documentElement.classList.add('alpha');
   function applyChroma(top, frame) {
     const root = document.documentElement;
     root.classList.toggle('chroma', top > 0);

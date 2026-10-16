@@ -6,7 +6,8 @@
 // TikTok chroma key mode (html.chroma): the top of the screen is pure green and gets keyed out in
 // LIVE Studio, so nothing else may be green - random colours skip the green hues.
 window.Chroma = {
-  get on() { return document.documentElement.classList.contains('chroma'); },
+  // alpha mode (transparent camera zone, no key filter) needs no colour restrictions
+  get on() { const c = document.documentElement.classList; return c.contains('chroma') && !c.contains('alpha'); },
   hue(h) { return this.on && h >= 65 && h <= 175 ? (h + 110) % 360 : h; },   // green -> cyan / blue / violet
 };
 

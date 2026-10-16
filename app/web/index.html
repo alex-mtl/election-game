@@ -158,7 +158,14 @@ function openSetup(g, onSave) {
     };
     const bat = document.createElement('a'); bat.className = 'sbtn'; bat.textContent = t('set.tt.bat');
     bat.href = '/api/tt.bat'; bat.download = 'LiveGames-TT.bat';
-    tt.append(copy, bat);
+    const alink = `http://localtest.me:${location.port || 80}/guess/?tt=1&alpha=1`;
+    const copyA = document.createElement('button'); copyA.className = 'sbtn'; copyA.textContent = t('set.tt.alpha');
+    copyA.title = alink;
+    copyA.onclick = async () => {
+      try { await navigator.clipboard.writeText(alink); copyA.textContent = t('set.tt.copied'); }
+      catch (e) { prompt(t('set.tt.alpha'), alink); }
+    };
+    tt.append(copy, copyA, bat);
     box.appendChild(tt);
   }
   const dlg = document.getElementById('setup');
