@@ -38,7 +38,7 @@ window.Greeter = (() => {
     const d = document.createElement('span');
     const hue = [...(name || '?')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
     d.className = 'av'; d.textContent = (clean(name)[0] || '?').toUpperCase();
-    d.style.background = `hsl(${hue} 90% 60%)`;
+    d.style.background = `hsl(${window.Chroma ? Chroma.hue(hue) : hue} 90% 60%)`;   // no green in chroma key mode
     return d;
   }
 

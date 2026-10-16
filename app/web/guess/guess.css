@@ -13,17 +13,34 @@ body { display: flex; justify-content: center; }
 
 /* ---- TikTok chroma key mode: pure green top (keyed out in LIVE Studio), the game below it.
    Flying effects (toasts, plane, butterflies, balloons) still use the whole screen; nothing green. */
-   The game is a fixed 9:16 frame (1080x1920 for the stream) with a 2 px white border, centred in the
+   The game is a fixed 9:16 frame (1080x1920 for the stream) with a 1 px green border, centred in the
    window: it only scales as a whole, it never stretches to the window's width or height. */
 #chromaZone { display: none; }
-html.chroma { --u: min(calc((100vw - 4px) / 100), calc((100vh - 4px) * 0.005625)); }   /* 1% of the frame width */
 html.chroma body { background: #000; align-items: center; }
 html.chroma #stage { width: calc(var(--u) * 100); height: calc(var(--u) * 177.78); flex: none;
-                     outline: 2px solid #fff; background: radial-gradient(120% 80% at 50% 0%, #1d0640 0%, var(--bg) 55%);
+                     outline: 1px solid #00ff00;   /* keyed out in Studio together with the green zone */ background: radial-gradient(120% 80% at 50% 0%, #1d0640 0%, var(--bg) 55%);
                      padding-top: calc(var(--chroma-top) + var(--u) * 2); }
 html.chroma #chromaZone { display: block; position: absolute; left: 0; right: 0; top: 0; height: var(--chroma-top);
                           background: #00ff00; z-index: 0; }
 html.chroma .overlay, html.chroma #rules { top: var(--chroma-top); }      /* winner, results, rules: game zone only */
+/* controls go under the frame (outside the stream picture): the frame fits above a 56 px strip */
+html.chroma { --u: min(calc((100vw - 2px) / 100), calc((100vh - 58px) * 0.005625)); }   /* 1% of the frame width */
+html.chroma body { height: calc(100vh - 56px); }
+/* popups live in the lower part of the camera zone, just above the game:
+   hint card at its bottom edge, small notes above it (stacking up), big toasts above those */
+html.chroma { --above-game: calc(var(--u) * 177.78 - var(--chroma-top)); }
+html.chroma #events { min-height: 0; position: static; }   /* the hint card is placed against the frame */
+html.chroma #hintCard { position: absolute; left: calc(var(--u) * 3); right: calc(var(--u) * 3); width: auto; z-index: 6;
+                        bottom: calc(var(--above-game) + var(--u) * 1.5); padding: calc(var(--u) * 1.6) calc(var(--u) * 3);
+                        border-radius: calc(var(--u) * 3); background: rgba(8, 0, 20, .88); border: 2px solid var(--yellow); }
+html.chroma #miniToasts { top: auto; bottom: calc(var(--above-game) + var(--u) * 12); flex-direction: column-reverse; }
+html.chroma #toast { top: auto; bottom: calc(var(--above-game) + var(--u) * 24); }
+html.chroma #bigNum { inset: 0 0 auto 0; height: var(--chroma-top); }
+/* over the green they must be opaque: half-transparent pixels would be half keyed out */
+html.chroma .mini { background: rgb(10, 0, 25); }
+html.chroma .tcard { background: rgb(8, 0, 20); }
+/* welcome pill: top of the camera zone (it is fixed to the window, the frame is centred above the controls) */
+html.chroma .greet { bottom: auto; top: calc((100vh - 56px - var(--u) * 177.78) / 2 + var(--u) * 4); }
 html.chroma { --lime: #ff4fd8; --t-warm: #fff04a; }
 html.chroma .neon-lime { text-shadow: 0 0 .25em var(--lime), 0 0 .8em rgba(255,79,216,.6); }
 

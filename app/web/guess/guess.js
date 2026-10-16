@@ -59,7 +59,7 @@
     const hue = [...(name || '?')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
     const fallback = () => {
       const d = el('span', 'av', (clean(name)[0] || '?').toUpperCase());
-      d.style.background = `hsl(${hue} 90% 60%)`;
+      d.style.background = `hsl(${Chroma.hue(hue)} 90% 60%)`;   // no green in chroma key mode
       return d;
     };
     if (!url || !/^https:\/\//.test(url)) return fallback();
