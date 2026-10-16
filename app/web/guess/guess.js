@@ -432,7 +432,9 @@
   function applyChroma(top) {
     const root = document.documentElement;
     root.classList.toggle('chroma', top > 0);
-    if (top > 0) root.style.setProperty('--chroma-top', top + 'vh');
+    if (top > 0) root.style.setProperty('--chroma-top', `calc(var(--u) * ${(1.7778 * top).toFixed(2)})`);  // % of the frame
+    const zone = $('chromaZone'), stage = $('stage');
+    if (zone.parentNode !== stage) stage.prepend(zone);   // the green zone is the top of the frame
   }
 
   function render(s) {

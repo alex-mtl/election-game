@@ -13,11 +13,16 @@ body { display: flex; justify-content: center; }
 
 /* ---- TikTok chroma key mode: pure green top (keyed out in LIVE Studio), the game below it.
    Flying effects (toasts, plane, butterflies, balloons) still use the whole screen; nothing green. */
+   The game is a fixed 9:16 frame (1080x1920 for the stream) with a 2 px white border, centred in the
+   window: it only scales as a whole, it never stretches to the window's width or height. */
 #chromaZone { display: none; }
-html.chroma #chromaZone { display: block; position: fixed; left: 0; right: 0; top: 0; height: var(--chroma-top);
+html.chroma { --u: min(calc((100vw - 4px) / 100), calc((100vh - 4px) * 0.005625)); }   /* 1% of the frame width */
+html.chroma body { background: #000; align-items: center; }
+html.chroma #stage { width: calc(var(--u) * 100); height: calc(var(--u) * 177.78); flex: none;
+                     outline: 2px solid #fff; background: radial-gradient(120% 80% at 50% 0%, #1d0640 0%, var(--bg) 55%);
+                     padding-top: calc(var(--chroma-top) + var(--u) * 2); }
+html.chroma #chromaZone { display: block; position: absolute; left: 0; right: 0; top: 0; height: var(--chroma-top);
                           background: #00ff00; z-index: 0; }
-html.chroma body { background: var(--bg); }
-html.chroma #stage { padding-top: calc(var(--chroma-top) + var(--u) * 2); }
 html.chroma .overlay, html.chroma #rules { top: var(--chroma-top); }      /* winner, results, rules: game zone only */
 html.chroma { --lime: #ff4fd8; --t-warm: #fff04a; }
 html.chroma .neon-lime { text-shadow: 0 0 .25em var(--lime), 0 0 .8em rgba(255,79,216,.6); }
