@@ -387,7 +387,10 @@ html.chroma #recent > .title { display: none; }
                    background: linear-gradient(180deg, color-mix(in srgb, currentColor 75%, #fff) 0%, currentColor 45%,
                                                color-mix(in srgb, currentColor 80%, #000) 100%);
                    box-shadow: 0 0 1.1em currentColor, 0 0 .3em currentColor, inset 0 1px 0 rgba(255,255,255,.5); }
-.grow .main .rk, .grow .main .wd { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 .5em rgba(0,0,0,.6); }
+.grow .main .rk { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 .5em rgba(0,0,0,.6); }
+/* guessed words: soft light colour, no blurred halo (easier on the eyes over a long game), a crisp 1px
+   shadow keeps them readable over the coloured bars */
+.grow .main .wd { color: #dcd6e8; font-weight: 700; letter-spacing: .03em; text-shadow: 0 1px 1px rgba(0,0,0,.85); }
 
 /* crisp plates: no glow/blur, solid contrast against the dark background */
 .grow .main .bar { opacity: 1; background: currentColor; box-shadow: none; }
