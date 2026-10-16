@@ -445,6 +445,20 @@ class TTLauncherTest(unittest.TestCase):
         self.assertIn("\r\n", b)                                        # Windows line ends
 
 
+class ChampionsTest(unittest.TestCase):
+    def test_places_and_ties(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        st = g.stats
+        for pid, w in (("a", 5), ("b", 3), ("c", 3), ("d", 3), ("e", 2), ("f", 1)):
+            s = st.get(pid, pid.upper(), "")
+            s["wins"] = w
+        ch = st.champions()
+        self.assertEqual([c["wins"] for c in ch], [5, 3, 2])          # 1st, 2nd (tie of 3), 3rd
+        self.assertEqual([c["n"] for c in ch], [1, 3, 1])
+        self.assertEqual(ch[0]["players"][0]["name"], "A")
+        self.assertIn("champions", g.snapshot())
+
+
 class GiftReceiverTest(unittest.TestCase):
     def test_gift_to_someone_else_gives_no_hint(self):
         from app.hub import Hub

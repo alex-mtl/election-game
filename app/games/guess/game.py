@@ -689,6 +689,7 @@ class GuessGame(BaseGame):
                       "top100": sum(1 for p in players if p.best <= 100),
                       "guesses": sum(p.guesses for p in self.players.values())},
             "streamLeaderboard": self.stats.leaderboard(),
+            "champions": self.stats.champions(),                          # TT mode: medals block
             "lastRound": self.history[-1] if self.history else None,    # for the ticker
             "chroma": self.chroma_top if self.chroma else 0,              # % of the screen, 0 = off
             "chromaTop": self.chroma_top,                                 # TT mode (?tt=1) always uses it

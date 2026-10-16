@@ -90,6 +90,20 @@ class SessionStats:
                         "streak": s["streak"]})
         return out
 
+    def champions(self, places=3, per_place=6):
+        """Stream champions by wins: [{wins, n, players: [{name, avatar}]}] for the 1st, 2nd, 3rd
+        distinct win counts (a tie shares the place)."""
+        groups = {}
+        for s in self.players.values():
+            if s["wins"]:
+                groups.setdefault(s["wins"], []).append(s)
+        out = []
+        for w in sorted(groups, reverse=True)[:places]:
+            ps = sorted(groups[w], key=lambda s: (-s["podiums"], s["best"] or 10**9))
+            out.append({"wins": w, "n": len(ps),
+                        "players": [{"name": s["name"], "avatar": s["avatar"]} for s in ps[:per_place]]})
+        return out
+
     def top_streak(self):
         best = max(self.players.values(), key=lambda s: s["streak"], default=None)
         return {"name": best["name"], "n": best["streak"]} if best and best["streak"] >= 2 else None

@@ -314,6 +314,31 @@
     fresh = fresh.slice(0, MAX_FRESH);
     renderGuesses(lastBest);
   }
+  // stream champions (chroma / TT mode): one line per place - avatar + nick when alone, overlapping
+  // avatars when tied (like TikTok's viewers), wins, medal
+  let champsKey = '';
+  function renderChamps(groups) {
+    const box = $('champs');
+    const key = JSON.stringify(groups);
+    document.documentElement.classList.toggle('has-champs', groups.length > 0);
+    if (key === champsKey) return;
+    champsKey = key;
+    box.replaceChildren();
+    groups.forEach((g, i) => {
+      const row = el('div', 'champ');
+      if (g.n === 1) {
+        row.append(avatar(g.players[0].name, g.players[0].avatar), el('span', 'cn', g.players[0].name));
+      } else {
+        const stack = el('span', 'stack');
+        g.players.slice(0, 3).forEach(p => stack.append(avatar(p.name, p.avatar)));
+        if (g.n > 3) stack.append(el('span', 'more', '+' + (g.n - 3)));
+        row.append(stack);
+      }
+      row.append(el('span', 'cw', String(g.wins)), el('span', 'cm', ['🥇', '🥈', '🥉'][i]));
+      box.append(row);
+    });
+  }
+
   function renderGuesses(best) {
     lastBest = best;
     const now = Date.now();
@@ -484,6 +509,7 @@
       $('goalFill').style.width = Math.min(100, 100 * s.goal.value / s.goal.target) + '%';
     }
     renderHunters(s.topHunters);
+    renderChamps(s.champions || []);
     renderGuesses(s.bestGuesses);
     tagline(s);
 
