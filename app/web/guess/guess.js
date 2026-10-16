@@ -428,7 +428,11 @@
   const fmtClock = sec => Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
   let breakVoice = {};
 
-  // TikTok chroma key: green top zone (the camera shows through it), the game below
+  // TikTok chroma key: green top zone (the camera shows through it), the game below.
+  // TT mode (?tt=1, for TikTok LIVE Studio's Link source or the .bat launcher): always like that,
+  // a bare 9:16 frame, no controls.
+  const TT = new URLSearchParams(location.search).get('tt') === '1';
+  if (TT) document.documentElement.classList.add('tt');
   function applyChroma(top) {
     const root = document.documentElement;
     root.classList.toggle('chroma', top > 0);
@@ -437,13 +441,13 @@
     if (top > 0) {
       if (zone.parentNode !== stage) stage.prepend(zone);   // the green zone is the top of the frame
       let outer = $('outer');                              // the outer 9:16 frame: game + controls
-      if (!outer) {
+      if (!outer && !TT) {
         outer = document.createElement('div'); outer.id = 'outer';
         stage.parentNode.insertBefore(outer, stage);
         outer.appendChild(stage);
       }
       const bar = document.querySelector('.ctl-bar');
-      if (bar && bar.parentNode !== outer) outer.appendChild(bar);
+      if (outer && bar && bar.parentNode !== outer) outer.appendChild(bar);
     } else if ($('outer')) {
       location.reload();                                   // back to the normal layout
     }
@@ -451,7 +455,7 @@
 
   function render(s) {
     S = s;
-    applyChroma(s.chroma || 0);
+    applyChroma(TT ? (s.chroma || s.chromaTop || 33) : (s.chroma || 0));
     vocab = s.vocabSize || vocab;
     $('error').hidden = !s.error;
     if (s.error) { $('errText').textContent = t('g.err') + s.error; return; }

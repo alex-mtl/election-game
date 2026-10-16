@@ -64,6 +64,8 @@
   .sbtns { display: flex; justify-content: flex-end; gap: calc(var(--u) * 3); margin-top: calc(var(--u) * 2); }
   .sbtn { font: 900 calc(var(--u) * 4) var(--font-display); padding: .55em 1.1em; border-radius: 999px; cursor: pointer;
           background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  .sttrow { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2.5); margin-top: calc(var(--u) * 2); }
+  .sttrow .sbtn { color: var(--cyan); border-color: var(--cyan); text-decoration: none; font-size: calc(var(--u) * 3.4); }
   .sbtn.go { color: #000; background: var(--lime); border-color: var(--lime); box-shadow: 0 0 1em var(--lime); }
   .langs button.on { color: #000; background: var(--lime); border-color: var(--lime); box-shadow: 0 0 1em var(--lime); }
 </style>
@@ -145,6 +147,20 @@ function openSetup(g, onSave) {
     row.append(cap, sel);
     box.appendChild(row);
   });
+  if (g.name === 'guess') {                          // TikTok LIVE Studio: Link source address / Chrome launcher
+    const tt = document.createElement('div'); tt.className = 'sttrow';
+    const link = `http://localtest.me:${location.port || 80}/guess/?tt=1`;
+    const copy = document.createElement('button'); copy.className = 'sbtn'; copy.textContent = t('set.tt.link');
+    copy.title = link;
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(link); copy.textContent = t('set.tt.copied'); }
+      catch (e) { prompt(t('set.tt.link'), link); }
+    };
+    const bat = document.createElement('a'); bat.className = 'sbtn'; bat.textContent = t('set.tt.bat');
+    bat.href = '/api/tt.bat'; bat.download = 'LiveGames-TT.bat';
+    tt.append(copy, bat);
+    box.appendChild(tt);
+  }
   const dlg = document.getElementById('setup');
   dlg.hidden = false;
   document.getElementById('setCancel').onclick = () => { dlg.hidden = true; };

@@ -51,6 +51,10 @@ html.chroma .mini { background: rgb(10, 0, 25); }
 html.chroma .tcard { background: rgb(8, 0, 20); }
 /* welcome pill: top of the camera zone (it is fixed to the window, the frame is centred above the controls) */
 html.chroma .greet { bottom: auto; top: calc((100vh - var(--u) * 185.28 - 3px) / 2 + var(--u) * 4); }
+/* TT mode: just the 9:16 game frame filling the source / window, no controls, no outer frame */
+html.chroma.tt { --u: min(calc((100vw - 2px) / 100), calc((100vh - 2px) * 0.005625)); }
+html.tt .ctl-bar { display: none; }
+html.chroma.tt .greet { top: calc((100vh - var(--u) * 177.78) / 2 + var(--u) * 4); }
 html.chroma { --lime: #ff4fd8; --t-warm: #fff04a; }
 html.chroma .neon-lime { text-shadow: 0 0 .25em var(--lime), 0 0 .8em rgba(255,79,216,.6); }
 

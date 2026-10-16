@@ -16,7 +16,7 @@ import hashlib
 import os
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from . import config
@@ -34,6 +34,22 @@ def web_version():
                 h.update(f.encode() + fh.read())
     return h.hexdigest()[:12]
 
+
+
+def tt_bat(port):
+    """Windows launcher: Chrome as a bare 9:16 app window with sound allowed, on the TT mode page."""
+    chrome = "\\Google\\Chrome\\Application\\chrome.exe"
+    return "\r\n".join([
+        "@echo off",
+        "rem Live Games - TT mode: a Chrome window without tabs/toolbars, 9:16, sound without a click",
+        f"set URL=http://localhost:{port}/guess/?tt=1",
+        f"set CH=%ProgramFiles%{chrome}",
+        f'if not exist "%CH%" set CH=%ProgramFiles(x86)%{chrome}',
+        f'if not exist "%CH%" set CH=%LocalAppData%{chrome}',
+        'start "" "%CH%" --app=%URL% --window-size=540,960 --autoplay-policy=no-user-gesture-required'
+        ' --user-data-dir="%LocalAppData%\\LiveGamesTT"',
+        "",
+    ])
 
 def create_app(hub):
     app = FastAPI(title="TikTok LIVE games", docs_url=None, redoc_url=None)
@@ -144,6 +160,11 @@ def create_app(hub):
             pass
         finally:
             hub.clients.discard(websocket)
+
+    @app.get("/api/tt.bat")
+    def tt_launcher(req: Request):
+        return Response(tt_bat(req.url.port or 8765), media_type="application/octet-stream",
+                        headers={"Content-Disposition": 'attachment; filename="LiveGames-TT.bat"'})
 
     @app.get("/{game}")
     def game_no_slash(game: str):

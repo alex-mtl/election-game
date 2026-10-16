@@ -214,6 +214,7 @@ window.AudioKit = (() => {
       try { enable(); } catch (e) {}
       setTimeout(() => {
         if (ctx && ctx.state === 'running') return;      // sound already works: no overlay
+        if (qs.get('tt') === '1') return;                // TT mode: never cover the stream picture
         const ov = document.createElement('div'); ov.className = 'ctl-unlock';
         const b = document.createElement('button'); b.dataset.i18n = 'unlock'; b.textContent = T('unlock');
         ov.appendChild(b); document.body.appendChild(ov);

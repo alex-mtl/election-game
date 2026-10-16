@@ -687,6 +687,7 @@ class GuessGame(BaseGame):
             "streamLeaderboard": self.stats.leaderboard(),
             "lastRound": self.history[-1] if self.history else None,    # for the ticker
             "chroma": self.chroma_top if self.chroma else 0,              # % of the screen, 0 = off
+            "chromaTop": self.chroma_top,                                 # TT mode (?tt=1) always uses it
             "streak": self.stats.top_streak(),
             "vocabSize": self.sem.size if self.sem else 0,
             "temps": dict(zip(TEMPS, config.TEMPERATURE_BOUNDS + [None])),
