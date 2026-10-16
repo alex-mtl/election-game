@@ -20,7 +20,7 @@ html.chroma body { background: #000; align-items: center; }
 html.chroma { --fh: 177.78; --fr: 1.7778; }   /* frame height in u and height/width: 9:16 (9:19.5, 9:20 from the setting) */
 html.chroma #stage { width: calc(var(--u) * 100); height: calc(var(--u) * var(--fh)); flex: none;
                      outline: 1px solid #00ff00;   /* keyed out in Studio together with the green zone */ background: radial-gradient(120% 80% at 50% 0%, #1d0640 0%, var(--bg) 55%);
-                     padding-top: calc(var(--chroma-top) + var(--u) * 2); }
+                     padding-top: calc(var(--chroma-top) + var(--u) * 1); }
 html.chroma #chromaZone { display: block; position: absolute; left: 0; right: 0; top: 0; height: var(--chroma-top);
                           background: #00ff00; z-index: 0; }
 html.chroma .overlay, html.chroma #rules { top: var(--chroma-top); }      /* winner, results, rules: game zone only */
@@ -54,13 +54,13 @@ html.chroma #bigNum { inset: 0 0 auto 0; height: var(--chroma-top); }
    Avatars as big as TikTok's own viewer avatars (~7% of the width), overlapping when tied */
 #champs, #likers { display: none; }
 html.chroma #likers { display: flex; position: absolute; left: calc(var(--u) * 2.8); z-index: 7;
-                      bottom: calc(var(--above-game) - var(--u) * 1.7); flex-direction: column; align-items: flex-start;
+                      bottom: calc(var(--above-game) + var(--u) * .6); flex-direction: column; align-items: flex-start;
                       gap: calc(var(--u) * .5); pointer-events: none; }
 .champ.liker { padding: calc(var(--u) * .25) calc(var(--u) * .25) calc(var(--u) * .25) calc(var(--u) * 2.2); }
 .champ.liker .cn { padding-right: calc(var(--u) * 1.6); }
 .champ.liker .cm { font-size: calc(var(--u) * 4.4); }
 html.chroma #champs { display: flex; position: absolute; right: calc(var(--u) * 2.8); z-index: 7;
-                      bottom: calc(var(--above-game) - var(--u) * 1.7); flex-direction: column; align-items: flex-end;
+                      bottom: calc(var(--above-game) + var(--u) * .6); flex-direction: column; align-items: flex-end;
                       gap: calc(var(--u) * .5); pointer-events: none; }
 /* dense columns: little space between and inside the lines, right on top of the timer row */
 .champ { display: flex; align-items: center; gap: calc(var(--u) * 1.6); border-radius: 999px;
@@ -87,11 +87,11 @@ html.chroma #hintCard.new { animation: hintIn .45s ease-out; }
 html.chroma .mini { background: rgb(10, 0, 25); }
 html.chroma .tcard { background: rgb(8, 0, 20); }
 /* welcome pill: top of the camera zone (it is fixed to the window, the frame is centred above the controls) */
-html.chroma .greet { bottom: auto; top: calc((100vh - var(--u) * (var(--fh) + 7.5) - 3px) / 2 + var(--u) * 4); }
+html.chroma .greet { bottom: auto; top: calc((100vh - var(--u) * (var(--fh) + 7.5) - 3px) / 2 + var(--u) * 10); }
 /* TT mode: just the 9:16 game frame filling the source / window, no controls, no outer frame */
 html.chroma.tt { --u: min(calc((100vw - 2px) / 100), calc((100vh - 2px) / var(--fh))); }
 html.tt .ctl-bar { display: none; }
-html.chroma.tt .greet { top: calc((100vh - var(--u) * var(--fh)) / 2 + var(--u) * 4); }
+html.chroma.tt .greet { top: calc((100vh - var(--u) * var(--fh)) / 2 + var(--u) * 10); }
 html.chroma:not(.alpha) { --lime: #ff4fd8; --t-warm: #fff04a; }
 html.chroma:not(.alpha) .neon-lime { text-shadow: 0 0 .25em var(--lime), 0 0 .8em rgba(255,79,216,.6); }
 /* alpha mode (?alpha=1): the camera zone is fully transparent - for a Link / browser source that keeps
@@ -104,9 +104,13 @@ html.alpha #stage::before { content: ''; position: absolute; left: 0; right: 0; 
 html.alpha #chromaZone { background: transparent; }
 /* alpha: the timer row sits inside the camera zone, at its bottom; the side columns and the hint go
    up by the same height so they stay on top of it */
-html.alpha #top { margin-top: calc(-1 * var(--toprow, 0px)); }
-html.alpha #champs, html.alpha #likers { bottom: calc(var(--above-game) + var(--toprow, 0px) - var(--u) * 1.7); }
-html.alpha #hintCard { bottom: calc(var(--above-game) + var(--toprow, 0px) + var(--u) * 1.5); }
+/* the round / timer / players row: a compact strip at the very top of the frame, above TikTok's own
+   elements; no "best guesses" title - the guesses start right under the camera zone */
+html.chroma #top { position: absolute; left: calc(var(--u) * 2); right: calc(var(--u) * 2); top: calc(var(--u) * .8); z-index: 9; }
+html.chroma #top .chip { font-size: calc(var(--u) * 2.8); padding: .3em .8em; }
+html.chroma:not(.alpha) #top .chip { background: rgb(10, 0, 25); }
+html.chroma #timer { font-size: calc(var(--u) * 6.5); }
+html.chroma #recent > .title { display: none; }
 
 /* ---- top ---- */
 .toprow { display: flex; align-items: center; justify-content: space-between; }
