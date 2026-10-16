@@ -209,10 +209,16 @@ window.AudioKit = (() => {
     document.body.appendChild(bar);
     setMuted(muted);
     if (!muted) {
-      const ov = document.createElement('div'); ov.className = 'ctl-unlock';
-      const b = document.createElement('button'); b.dataset.i18n = 'unlock'; b.textContent = T('unlock');
-      ov.appendChild(b); document.body.appendChild(ov);
-      ov.onclick = () => { enable(); ov.remove(); say(T(o.hello || 'b.v.hello'), { rate: o.helloRate }); };
+      // try without a click first: TikTok LIVE Studio / OBS sources and Chrome (for a site where sound was
+      // used often) allow it; only if the browser refuses, ask for one click
+      try { enable(); } catch (e) {}
+      setTimeout(() => {
+        if (ctx && ctx.state === 'running') return;      // sound already works: no overlay
+        const ov = document.createElement('div'); ov.className = 'ctl-unlock';
+        const b = document.createElement('button'); b.dataset.i18n = 'unlock'; b.textContent = T('unlock');
+        ov.appendChild(b); document.body.appendChild(ov);
+        ov.onclick = () => { enable(); ov.remove(); say(T(o.hello || 'b.v.hello'), { rate: o.helloRate }); };
+      }, 400);
     }
   }
 
