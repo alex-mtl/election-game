@@ -42,6 +42,8 @@ async def run(simulate):
         hub.save_session()
         hub.balloons.save()
         print("stopped, state saved.")
+        sys.stdout.flush()
+        os._exit(0)                                # right away: the TikTok client can keep the loop alive
 
 
 def main():
