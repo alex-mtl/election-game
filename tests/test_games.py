@@ -508,6 +508,8 @@ class ChampionWordsTest(unittest.TestCase):
         g.players["first"].last_t = 0
         g.on_comment(first, r(20) + " " + r(30))                     # round champion: both words count
         self.assertEqual(g.players["first"].guesses, 3)
+        # "first" now holds the table's top 3: the next author down the table is a champion too
+        self.assertEqual(g._round_champion_ids(), {"first", "o"})
         g.players["copy"].last_t = 0
         g.on_comment(copycat, r(40) + " " + r(50))                   # not a champion: ignored
         self.assertEqual(g.players["copy"].guesses, 1)

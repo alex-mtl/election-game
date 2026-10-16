@@ -664,12 +664,14 @@ class GuessGame(BaseGame):
                 "pendingUntil": p.pending_until if p and p.pending_until else 0}
 
     def _round_champion_ids(self):
-        """Who named the round's three best words first (later namers of the same word don't count)."""
+        """Three different players: whoever named the table's best words first, going down the table
+        (if one player named the top 3, the authors of the 4th, 5th... words get the other places).
+        Later namers of the same word don't count."""
         out = []
         for g in sorted((g for g in self.guesses.values() if g["rank"] > 1 and self._visible(g)),
                         key=lambda g: g["rank"]):
             first = next((i for i in g.get("ids", []) if not (self.players.get(i) and self.players[i].dq)), None)
-            if first:
+            if first and first not in out:
                 out.append(first)
             if len(out) == 3:
                 break
