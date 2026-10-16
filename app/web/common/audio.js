@@ -158,6 +158,25 @@ window.AudioKit = (() => {
          || femaleVoices()[0] || vs.find(v => new RegExp('^' + lang, 'i').test(v.lang)) || null;
   }
   if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
+  // TT mode (TikTok LIVE Studio / launcher): tell the server which voices this browser has, so we can
+  // see what Studio's built-in browser offers (it is not Chrome)
+  let voicesReported = false;
+  function reportVoices(final) {
+    if (voicesReported || qs.get('tt') !== '1') return;
+    const vs = synth ? synth.getVoices() : [];
+    if (!vs.length && !final) return;
+    voicesReported = true;
+    const msg = 'voices (' + lang + '): ' + (synth ? '' : 'NO speechSynthesis; ') +
+      (vs.map(v => v.name + ' [' + v.lang + ']').join('; ') || 'none') +
+      ' | chosen: ' + (voice ? voice.name : '-') + ' | ua: ' + navigator.userAgent;
+    try {
+      fetch('/api/client-log', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify({ page: location.pathname, msg }) });
+    } catch (e) {}
+  }
+  if (synth) synth.addEventListener && synth.addEventListener('voiceschanged', () => setTimeout(() => reportVoices(false), 300));
+  setTimeout(() => reportVoices(false), 1500);
+  setTimeout(() => reportVoices(true), 5000);
 
   function say(text, o) {
     o = o || {};

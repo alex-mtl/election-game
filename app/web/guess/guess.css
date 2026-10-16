@@ -74,10 +74,14 @@ html.chroma:not(.alpha) .champ { background: rgb(10, 0, 25); }          /* opaqu
              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .champ .cw { font: 800 calc(var(--u) * 3.8) var(--font-text); color: #fff; }
 .champ .cm { font-size: calc(var(--u) * 5); line-height: 1; }
-/* popups at the bottom of the camera zone sit above the side columns (--cols-h, set by guess.js) */
-html.chroma #hintCard { bottom: calc(var(--above-game) + var(--cols-h, 0px) + var(--u) * 1.5); }
-html.chroma #miniToasts { bottom: calc(var(--above-game) + var(--cols-h, 0px) + var(--u) * 12); }
-html.chroma #toast { bottom: calc(var(--above-game) + var(--cols-h, 0px) + var(--u) * 24); }
+/* big toasts in the middle of the camera zone, small notes right under them, the hint card on the
+   zone's bottom edge - all over the side columns for the few seconds they show */
+html.chroma #toast { top: calc(var(--chroma-top) * .42); bottom: auto; transform: translateY(-50%); z-index: 8; }
+html.chroma #miniToasts { top: calc(var(--chroma-top) * .42 + var(--u) * 13); bottom: auto; flex-direction: column; z-index: 8; }
+html.chroma #hintCard { z-index: 8; }
+/* full-width card: no "pop" (it scaled to 125% and got cut at the frame edges), a soft slide-in instead */
+html.chroma #hintCard.new { animation: hintIn .45s ease-out; }
+@keyframes hintIn { from { opacity: 0; transform: translateY(25%); } }
 /* over the green they must be opaque: half-transparent pixels would be half keyed out */
 html.chroma .mini { background: rgb(10, 0, 25); }
 html.chroma .tcard { background: rgb(8, 0, 20); }

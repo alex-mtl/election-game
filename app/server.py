@@ -110,7 +110,7 @@ def create_app(hub):
         """Pages report what happens in the browser (alerts on/off, speech errors)."""
         try:
             d = await req.json()
-            print(f"[client] {str(d.get('page'))[:20]}: {str(d.get('msg'))[:200]}")
+            print(f"[client] {str(d.get('page'))[:20]}: {str(d.get('msg'))[:2000]}")
         except Exception:
             pass
         return {"ok": True}
