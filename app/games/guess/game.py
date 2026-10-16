@@ -424,6 +424,7 @@ class GuessGame(BaseGame):
             # one hint now (unless this viewer had one less than hint_cd s ago), every other gift
             # of the combo goes on their account: spent later with "подсказка", one at a time
             n, now = max(1, int(count or 1)), time.time()
+            self._mark_credit_account(viewer.id)         # a gifter has a hint account, even at 0
             if self._hint_wait(viewer, now) == 0 and self.give_hint(viewer.name, now, viewer=viewer):
                 self.hint_t[viewer.id] = now
                 n -= 1
@@ -437,9 +438,8 @@ class GuessGame(BaseGame):
         if not viewer_id:
             return 0
         left = max(0, self.credits.get(viewer_id, 0) + int(n))
-        if int(n) > 0 and viewer_id not in self.credits_ever:
-            self.credits_ever.add(viewer_id)
-            self.store.save(self.CREDITS_EVER, sorted(self.credits_ever))
+        if int(n) > 0:
+            self._mark_credit_account(viewer_id)
         if left:
             self.credits[viewer_id] = left
         else:
@@ -447,6 +447,12 @@ class GuessGame(BaseGame):
         self.store.save(self.CREDITS, self.credits)
         print(f"[guess] hint credits {viewer_id}: {left}")
         return left
+
+    def _mark_credit_account(self, viewer_id):
+        """Remember that this viewer has a hint account ("мои подсказки" answers them, even with 0)."""
+        if viewer_id and viewer_id not in self.credits_ever:
+            self.credits_ever.add(viewer_id)
+            self.store.save(self.CREDITS_EVER, sorted(self.credits_ever))
 
     def _hint_wait(self, viewer, now):
         """Seconds this viewer still has to wait for their next hint (0 = now)."""

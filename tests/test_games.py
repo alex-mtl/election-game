@@ -521,7 +521,7 @@ class MyHintsTest(unittest.TestCase):
         g = GuessGame(store)
         g.tick(time.time()); g.tick(time.time() + 0.01)
         events = []
-        g.emit = lambda kind, **kw: events.append((kind, kw))
+        g.emit = lambda _type, **kw: events.append((_type, kw))
         g.add_credits("kenny", 3)
         g.on_comment(Viewer("kenny", "Kenny", "", 1), "Мои ПОДСКАЗКИ!")
         self.assertEqual(events[-1], ("credits_info", {"name": "Kenny", "avatar": "", "n": 3}))
@@ -533,6 +533,10 @@ class MyHintsTest(unittest.TestCase):
         self.assertEqual(len(events), n)
         self.assertNotIn("nobody", g.players)                            # and not a guess
         self.assertIn("kenny", GuessGame(store).credits_ever)            # remembered
+        g.on_gift(Viewer("nina", "Nina", "", 1), "Rose", 1)              # a gift (hint at once, 0 left)
+        g.on_comment(Viewer("nina", "Nina", "", 1), "мои подсказки")
+        self.assertEqual(events[-1][0], "credits_info")
+        self.assertEqual(events[-1][1]["n"], 0)
 
 
 class GiftReceiverTest(unittest.TestCase):
