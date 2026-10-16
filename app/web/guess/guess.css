@@ -391,7 +391,9 @@ html.chroma #recent > .title { display: none; }
 /* guessed words: soft light colour, no blurred halo (easier on the eyes over a long game), a crisp 1px
    shadow keeps them readable over the coloured bars */
 .grow .main .wd { color: #fff; font: 600 calc(var(--u) * 4.8)/1 Arial, "Helvetica Neue", "Segoe UI", sans-serif; text-transform: lowercase;
-                  letter-spacing: .01em; text-shadow: 0 1px 1px rgba(0,0,0,.85); }
+                  letter-spacing: .01em;   /* thin black outline (8 directions: works in every browser) */
+                  text-shadow: -1px -1px 0 #000, 0 -1px 0 #000, 1px -1px 0 #000, -1px 0 0 #000, 1px 0 0 #000,
+                               -1px 1px 0 #000, 0 1px 0 #000, 1px 1px 0 #000; }
 
 /* crisp plates: no glow/blur, solid contrast against the dark background */
 .grow .main .bar { opacity: 1; background: currentColor; box-shadow: none; }
