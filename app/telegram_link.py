@@ -19,6 +19,7 @@ from . import config
 KEY_RE = re.compile(r"ключ-тг-[A-Za-z0-9_-]{8}", re.IGNORECASE)
 LINK_COMMANDS = {"настроить связь", "link up"}    # never the messenger's name: TikTok may filter it
 OFFLINE_STOP_SEC = 10 * 60         # LIVE offline that long -> the stream word is released
+LINK_COOLDOWN_SEC = 60            # "настроить связь": after anyone calls it, nobody can for a minute
 
 
 def norm(text):
@@ -51,7 +52,7 @@ class TelegramLink:
             return True
         if norm(text) in LINK_COMMANDS:
             now = time.time()
-            if self.word and now - self.info_t > 10:          # several viewers at once -> one toast
+            if self.word and now - self.info_t > LINK_COOLDOWN_SEC:   # one call per minute for the whole chat
                 self.info_t = now
                 self.hub.game.emit("tg_info", bot=self.bot, word=self.word.upper())
             return True

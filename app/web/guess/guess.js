@@ -332,13 +332,14 @@
   }
   // stream champions (chroma / TT mode): one line per place - avatar + nick when alone, overlapping
   // avatars when tied (like TikTok's viewers), wins, medal
-  let champsKey = '';
+  let champsKey = '', tgBot = '';
   function renderChamps(groups) {
     const box = $('champs');
-    const key = JSON.stringify(groups);
+    const key = JSON.stringify([groups, tgBot]);
     if (key === champsKey) return;
     champsKey = key;
     box.replaceChildren();
+    if (tgBot) box.append(el('div', 'tgbot', '📲 @' + tgBot));     // the bot's name, readable above the champions
     groups.forEach((g, i) => {
       const row = el('div', 'champ');
       if (g.n === 1) {
@@ -707,7 +708,7 @@
   // (above the hint / call to action) and lifts off at 100 likes
   Balloons.mount({ ground: true, area: $('stage'), bottom: 'calc(var(--u) * 26)',
                    width: 'calc(var(--u) * 20)', sound: true });
-  Live.start({ game: 'guess', onState: (s, msg) => { render(s); Balloons.render(msg.balloons);
+  Live.start({ game: 'guess', onState: (s, msg) => { tgBot = msg.tgBot || ''; render(s); Balloons.render(msg.balloons);
                                                     renderLikers((msg.balloons || {}).likers); }, onEvent,
                onFeed: e => {
                  if (e.type === 'balloon') Balloons.launch(e);
