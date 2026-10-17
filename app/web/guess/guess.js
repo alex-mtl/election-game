@@ -195,6 +195,13 @@
       case 'credits_info':                       // "мои подсказки": on the ticker line
         queueTicker(t('g.tk.credits', { name: esc(e.name), hints: I18N.n(e.n || 0, 'hint') }));
         break;
+      case 'tg_info':                            // "настроить связь": the bot and the stream word
+        toast('📲 ' + (e.bot ? '@' + e.bot : 'Telegram'), t('g.t.tgWord', { w: clean(e.word) }), '#2aabee', { important: true, hold: 6 });
+        queueTicker(t('g.tk.tg', { bot: esc(e.bot ? '@' + e.bot : 'Telegram'), w: esc(e.word) }));
+        break;
+      case 'tg_linked':
+        mini(t('g.t.tgLinked', { name }), 'follow');
+        break;
       case 'hint_wait':
         mini(t('g.t.hintWait', { name, s: e.seconds }), 'gift');
         break;

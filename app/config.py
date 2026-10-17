@@ -80,4 +80,7 @@ GIFT_HINT_EXCLUDE = []
 GIFT_NEW_ROUND_NAMES = [g.lower() for g in _list("GIFT_NEW_ROUND_NAMES", "")]
 SUBSCRIBERS_ONLY = _b("SUBSCRIBERS_ONLY")
 GOAL_LABEL = os.getenv("GOAL_LABEL", "FOLLOW GOAL")
+# ---- telegram bot (project tiktok-tg-bot on AWS); empty = off ----
+TG_BOT_URL = os.getenv("TG_BOT_URL", "")
+TG_GAME_KEY = os.getenv("TG_GAME_KEY", "")
 GOAL_TARGET = _i("GOAL_TARGET", 0)                       # follows this stream; 0 hides the goal bar

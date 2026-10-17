@@ -705,5 +705,36 @@ class BattleTest(unittest.TestCase):
         self.assertEqual(b.join("z", "Z"), ("a", "yellow"))     # joiner credited to last commenter
 
 
+class TelegramLinkTest(unittest.TestCase):
+    def test_commands_and_key(self):
+        import asyncio
+        from app.hub import Hub
+        from app.telegram_link import TelegramLink
+        hub = Hub(JsonStore(tempfile.mkdtemp()))
+        hub.set_active("guess")
+        link = hub.tg = TelegramLink(hub, "http://bot", "k")
+        calls = []
+
+        async def api(path, **body):
+            calls.append((path, body))
+            return {"ok": True, "linked": True, "first": True}
+        link.api = api
+        link.word, link.bot = "маринад", "test_bot"
+        v = Viewer("Vorobey", "воробей")
+
+        async def go():
+            hub.comment(v, "Настроить связь!")
+            hub.comment(v, "мой ключ-тг-AbC_12-z")
+            await asyncio.sleep(0)
+        asyncio.run(go())
+        types = [e["type"] for e in hub.game.events]
+        self.assertIn("tg_info", types)
+        self.assertIn("tg_linked", types)
+        self.assertEqual(calls, [("/game/key", {"key": "ключ-тг-AbC_12-z", "tiktok_id": "Vorobey", "tiktok_name": "воробей"})])
+        info = [e for e in hub.game.events if e["type"] == "tg_info"][0]
+        self.assertEqual((info["bot"], info["word"]), ("test_bot", "МАРИНАД"))
+        self.assertFalse(link.on_comment(v, "огурец"))                 # an ordinary guess goes to the game
+
+
 if __name__ == "__main__":
     unittest.main()

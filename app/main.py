@@ -26,6 +26,10 @@ async def run(simulate):
         tasks.append(hub.simulator())
     else:
         tasks.append(TikTokConnector(hub, config.TIKTOK_USERNAME).run_forever())
+    if config.TG_BOT_URL and config.TG_GAME_KEY:
+        from .telegram_link import TelegramLink
+        hub.tg = TelegramLink(hub, config.TG_BOT_URL, config.TG_GAME_KEY)
+        tasks.append(hub.tg.run())
     print(f"[web] open http://localhost:{config.PORT}/ (phone: http://<this-PC-IP>:{config.PORT}/)")
 
     bg = [asyncio.create_task(t) for t in tasks]

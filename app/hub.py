@@ -41,6 +41,7 @@ class Hub:
         self.clients = set()                      # websockets
         self.sent_seq = {name: g.seq for name, g in self.games.items()}
         self.tiktok_status = "offline"
+        self.tg = None                                # TelegramLink when the bot is configured
         # stream feed (comments, gifts) for the menu page's alerts, independent of the game
         self.feed = deque(maxlen=100)
         self.feed_seq = 0
@@ -127,6 +128,8 @@ class Hub:
             return
         self._feed(type="chat", name=v.name, avatar=v.avatar, text=text[:200], sent=ts,
                    host=v.id.lower() == config.TIKTOK_USERNAME.lower())
+        if self.tg and self.tg.on_comment(v, text):  # "настроить связь" / a Telegram key: not a guess
+            return
         self.game.on_comment(v, text, ts)
 
     def join(self, v: Viewer):
