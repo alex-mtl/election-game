@@ -17,7 +17,7 @@ import time
 from . import config
 
 KEY_RE = re.compile(r"ключ-тг-[A-Za-z0-9_-]{8}", re.IGNORECASE)
-LINK_COMMANDS = {"настроить связь", "настроить телеграм", "телеграм", "link telegram", "telegram"}
+LINK_COMMANDS = {"настроить связь", "link up"}    # never the messenger's name: TikTok may filter it
 OFFLINE_STOP_SEC = 10 * 60         # LIVE offline that long -> the stream word is released
 
 

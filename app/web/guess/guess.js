@@ -196,8 +196,8 @@
         queueTicker(t('g.tk.credits', { name: esc(e.name), hints: I18N.n(e.n || 0, 'hint') }));
         break;
       case 'tg_info':                            // "настроить связь": the bot and the stream word
-        toast('📲 ' + (e.bot ? '@' + e.bot : 'Telegram'), t('g.t.tgWord', { w: clean(e.word) }), '#2aabee', { important: true, hold: 6 });
-        queueTicker(t('g.tk.tg', { bot: esc(e.bot ? '@' + e.bot : 'Telegram'), w: esc(e.word) }));
+        toast('📲 ' + (e.bot ? '@' + e.bot : ''), t('g.t.tgWord', { w: clean(e.word) }), '#2aabee', { important: true, hold: 6 });
+        queueTicker(t('g.tk.tg', { bot: esc(e.bot ? '@' + e.bot : ''), w: esc(e.word) }));
         break;
       case 'tg_linked':
         mini(t('g.t.tgLinked', { name }), 'follow');
