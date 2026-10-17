@@ -391,10 +391,9 @@ html.chroma #recent > .title { display: none; }
                   /* fixed width (fits "38 360"), number on the left edge: every word starts on the same line */
                   flex: 0 0 calc(var(--u) * 13.6); width: calc(var(--u) * 13.6); text-align: left;
                   font-variant-numeric: tabular-nums; }
-/* guessed words: soft light colour, no blurred halo (easier on the eyes over a long game), a crisp 1px
-   shadow keeps them readable over the coloured bars */
-.grow .main .wd { color: #3b82c4; font: 600 calc(var(--u) * 4.8)/1 Arial, "Helvetica Neue", "Segoe UI", sans-serif; text-transform: uppercase;
-                  letter-spacing: .01em; text-shadow: none; }
+/* guessed words: "плакатный белый капс" (the owner's name for it) - the game's display font, white, capitals,
+   dark blurred halo for the coloured bars. Tried and rejected: soft grey, Arial, lower case, blue. */
+.grow .main .wd { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 .5em rgba(0,0,0,.6); }
 
 /* crisp plates: no glow/blur, solid contrast against the dark background */
 .grow .main .bar { opacity: 1; background: currentColor; box-shadow: none; }
