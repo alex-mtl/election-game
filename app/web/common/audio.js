@@ -186,7 +186,7 @@ window.AudioKit = (() => {
     if (voice) u.voice = voice;
     u.lang = voice ? voice.lang : ({ ru: 'ru-RU', fr: 'fr-FR', es: 'es-ES' }[lang] || 'en-US'); u.volume = 1;
     // one speed for all lines (excited ones differ only by pitch); o.rate = exact speed, e.g. 1 for key phrases
-    u.rate = o.rate || Math.min(10, 1.05 * rateMul); u.pitch = o.excited ? 1.35 : 1.05;
+    u.rate = o.rate || Math.min(10, 1.05 * rateMul); u.pitch = o.pitch || (o.excited ? 1.35 : 1.05);
     if (o.onend) u.onend = o.onend;
     u.onerror = ev => { if (window.clientLog) clientLog('speech error: ' + (ev.error || '?')); if (o.onend) o.onend(); };
     synth.speak(u);

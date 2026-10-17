@@ -577,6 +577,28 @@ class ShutdownTest(unittest.TestCase):
         self.assertEqual(g.hints, [])
 
 
+class MaoCallTest(unittest.TestCase):
+    def test_leaders_call_the_host(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        events = []
+        g.emit = lambda _type, **kw: events.append((_type, kw))
+        g.stats.get("champ", "Champ", "")["wins"] = 2                       # leader of the day
+        g.on_comment(Viewer("nobody", "Nobody", "", 1), "мао внимание")     # not a leader: nothing
+        self.assertEqual(events, [])
+        self.assertNotIn("nobody", g.players)                               # and not a guess
+        g.on_comment(Viewer("champ", "Champ", "", 1), "Мао, ВНИМАНИЕ!")
+        self.assertEqual(events[-1], ("mao_call", {"name": "Champ", "avatar": ""}))
+        g.on_comment(Viewer("champ", "Champ", "", 1), "мао внимание")       # within 30 s: ignored
+        self.assertEqual(len(events), 1)
+        g.mao_call_t -= 31
+        w = g.sem.words[int(g.order[5])]
+        g.on_comment(Viewer("r", "Round", "", 1), w)                        # leader of the round
+        events.clear()
+        g.on_comment(Viewer("r", "Round", "", 1), "мао внимание")
+        self.assertEqual(events[-1][0], "mao_call")
+
+
 class GiftReceiverTest(unittest.TestCase):
     def test_gift_to_someone_else_gives_no_hint(self):
         from app.hub import Hub

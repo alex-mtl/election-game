@@ -31,6 +31,9 @@ HINT_WORDS = {"подсказка", "hint"}
 # "my hints" in chat: the ticker tells the viewer how many hints they have on account
 MY_HINTS_WORDS = {"мои подсказки", "мои подскази", "какие подсказки", "сколько подсказок",
                   "my hints", "mes indices", "mis pistas"}
+# "мао внимание": a leader of the day / round calls the host (red ticker + voice), once per MAO_CALL_SEC
+MAO_CALL_WORDS = {"мао внимание", "mao внимание", "mao attention"}
+MAO_CALL_SEC = 30
 MAX_WORDS = 5000              # cap of aggregated words per round (memory guard)
 SIM_NAMES = ["Alex", "Mike", "Sarah", "John", "Emma", "Liam", "Olivia", "Noah", "Mia", "Leo"]
 
@@ -103,6 +106,7 @@ class GuessGame(BaseGame):
         self.chroma, self.chroma_top = False, 33     # green zone on top (keyed out in TikTok LIVE Studio)
         self.frame = 16                              # frame format 9:frame
         self.hint_t = {}                             # viewer id -> time of their last hint
+        self.mao_call_t = 0.0                        # last "мао внимание"
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
         if isinstance(used, list):                   # old format: English only
@@ -233,6 +237,9 @@ class GuessGame(BaseGame):
                 n = self.credits.get(viewer.id, 0)
                 self.emit("credits_info", name=viewer.name, avatar=viewer.avatar, n=n)
                 print(f"[guess] {viewer.name} asked for their hints: {n}")
+            return
+        if cmd in MAO_CALL_WORDS:                        # "мао внимание": never a guess
+            self.call_host(viewer)
             return
         if not self.sem or self.phase not in (PLAYING, WINNER):
             return
@@ -686,6 +693,19 @@ class GuessGame(BaseGame):
                 "count": g["count"], "name": g.get("last") or g["name"], "first": g["name"],
                 "avatar": g.get("last_avatar", g["avatar"]),
                 "pendingUntil": p.pending_until if p and p.pending_until else 0}
+
+    def call_host(self, viewer, now=None):
+        """A leader of the day (stream champion) or of the round calls the host: red ticker + voice x3."""
+        now = now or time.time()
+        if viewer.id not in self.stats.champion_ids() and viewer.id not in self._round_champion_ids():
+            return False
+        if now - self.mao_call_t < MAO_CALL_SEC:
+            print(f"[guess] {viewer.name} calls Mao: too soon")
+            return False
+        self.mao_call_t = now
+        self.emit("mao_call", name=viewer.name, avatar=viewer.avatar)
+        print(f"[guess] {viewer.name} calls Mao")
+        return True
 
     def _round_champion_ids(self):
         """Three different players: whoever named the table's best words first, going down the table

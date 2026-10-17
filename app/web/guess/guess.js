@@ -186,6 +186,12 @@
         toast(NAME, t('g.t.streak', streakP(e.n)), 'var(--orange)', { huge: e.n >= 3, important: true, hold: e.n >= 5 ? 2.8 : 2 });
         voice(t('g.v.streak', Object.assign(streakP(e.n), { name })), 'high');
         break;
+      case 'mao_call': {                          // a leader calls the host: red ticker + 3x high voice
+        const line = t('g.tk.mao', { name: clean(e.name) });
+        queueTicker('<span class="alarm">' + esc(line) + '</span>');
+        for (let i = 0; i < 3; i++) A.say(line, { pitch: 2, rate: 1.3 });   // volume is already the max (1)
+        break;
+      }
       case 'credits_info':                       // "мои подсказки": on the ticker line
         queueTicker(t('g.tk.credits', { name: esc(e.name), hints: I18N.n(e.n || 0, 'hint') }));
         break;
