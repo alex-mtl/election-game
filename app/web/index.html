@@ -65,6 +65,10 @@
   .sbtn { font: 900 calc(var(--u) * 4) var(--font-display); padding: .55em 1.1em; border-radius: 999px; cursor: pointer;
           background: transparent; color: var(--muted); border: 1px solid var(--line); }
   .sttrow { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2.5); margin-top: calc(var(--u) * 2); }
+  .shost { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 1.5); margin-top: calc(var(--u) * 2); }
+  .shost .qr { background: #fff; line-height: 0; }
+  .shost a { color: var(--cyan); word-break: break-all; font-size: calc(var(--u) * 3); }
+  .shost .snote { color: #ffb347; font-size: calc(var(--u) * 3); text-align: center; }
   .sttrow .sbtn { color: var(--cyan); border-color: var(--cyan); text-decoration: none; font-size: calc(var(--u) * 3.4); }
   .sbtn.go { color: #000; background: var(--lime); border-color: var(--lime); box-shadow: 0 0 1em var(--lime); }
   .langs button.on { color: #000; background: var(--lime); border-color: var(--lime); box-shadow: 0 0 1em var(--lime); }
@@ -94,6 +98,7 @@
 <script src="/common/i18n.js"></script>
 <script src="/common/live.js"></script>
 <script src="/common/audio.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 const t = I18N.t;
 let state = null;
@@ -167,6 +172,33 @@ function openSetup(g, onSave) {
     };
     tt.append(copy, copyA, bat);
     box.appendChild(tt);
+  }
+  if (g.name === 'global') {                         // the streamer becomes the host in the bot: one-time link + QR
+    const row = document.createElement('div'); row.className = 'sttrow';
+    const btn = document.createElement('button'); btn.className = 'sbtn'; btn.textContent = t('set.host.btn');
+    const out = document.createElement('div'); out.className = 'shost';
+    btn.onclick = async () => {
+      btn.disabled = true;
+      try {
+        const r = await fetch('/api/tg/host-link', { method: 'POST' });
+        if (!r.ok) throw new Error(r.status);
+        const { link } = await r.json();
+        out.replaceChildren();
+        if (window.qrcode) {
+          const q = qrcode(0, 'M'); q.addData(link); q.make();
+          const img = document.createElement('div'); img.className = 'qr'; img.innerHTML = q.createSvgTag({ cellSize: 3, margin: 2 });
+          out.append(img);
+        }
+        const a = document.createElement('a'); a.href = link; a.target = '_blank'; a.textContent = link;
+        const note = document.createElement('div'); note.className = 'snote'; note.textContent = t('set.host.note');
+        out.append(a, note);
+      } catch (e) {
+        out.textContent = t('set.host.err');
+      }
+      btn.disabled = false;
+    };
+    row.append(btn);
+    box.append(row, out);
   }
   const dlg = document.getElementById('setup');
   dlg.hidden = false;

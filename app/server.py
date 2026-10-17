@@ -161,6 +161,16 @@ def create_app(hub):
         finally:
             hub.clients.discard(websocket)
 
+    @app.post("/api/tg/host-link")
+    async def tg_host_link():
+        """One-time link that makes whoever opens it in the messenger the host of this game (menu only)."""
+        if not hub.tg:
+            raise HTTPException(404, "bot not configured")
+        r = await hub.tg.api("/game/host_code")
+        if not r.get("link"):
+            raise HTTPException(502, "bot unavailable")
+        return r
+
     @app.get("/api/tt.bat")
     def tt_launcher(req: Request):
         return Response(tt_bat(req.url.port or 8765), media_type="application/octet-stream",
