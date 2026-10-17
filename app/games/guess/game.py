@@ -7,6 +7,7 @@ Everything runs on one asyncio loop, so a guess and the timeout can never both
 pick a winner: the first one moves PLAYING -> WINNER and the other sees WINNER.
 """
 
+import json
 import math
 import os
 import random
@@ -34,6 +35,7 @@ MY_HINTS_WORDS = {"мои подсказки", "мои подскази", "ка�
 # "мао внимание": a leader of the day / round calls the host (red ticker + voice), once per MAO_CALL_SEC
 MAO_CALL_WORDS = {"мао внимание", "mao внимание", "mao attention"}
 MAO_CALL_SEC = 30
+SETTER_TICKER_SEC = 120                          # "this word was picked by ..." on the ticker every 2 minutes
 MAX_WORDS = 5000              # cap of aggregated words per round (memory guard)
 SIM_NAMES = ["Alex", "Mike", "Sarah", "John", "Emma", "Liam", "Olivia", "Noah", "Mia", "Leo"]
 
@@ -87,6 +89,8 @@ class GuessGame(BaseGame):
     ROUNDS = "guess/rounds.json"
     CREDITS = "guess/hint_credits.json"          # viewer id -> hint credits ("on account")
     CREDITS_EVER = "guess/hint_credits_ever.json"  # everyone who ever had hints on account
+    CUSTOM = "guess/custom_words.json"           # words viewers picked via the bot ("загадывает"), in order
+    MISSING = "guess/missing_words.jsonl"        # their words that aren't in the dictionary (to extend it)
 
     def __init__(self, store):
         super().__init__(store)
@@ -107,6 +111,8 @@ class GuessGame(BaseGame):
         self.frame = 16                              # frame format 9:frame
         self.hint_t = {}                             # viewer id -> time of their last hint
         self.mao_call_t = 0.0                        # last "мао внимание"
+        self.custom = store.load(self.CUSTOM, []) or []   # [{id, word, lang, name, tiktok_id}]
+        self.played_custom = []                      # ids of custom words whose round started (for the bot)
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
         if isinstance(used, list):                   # old format: English only
@@ -144,6 +150,8 @@ class GuessGame(BaseGame):
         self.auto_hint_done = False
         self.finished_at = 0.0
         self.unknown_t = 0.0
+        self.setter = None            # {"id", "name"} of the viewer who picked this round's word
+        self.setter_t = 0.0
 
     def _start_countdown(self, now):
         self._clear_round()
@@ -152,7 +160,14 @@ class GuessGame(BaseGame):
         self.round_type = "speed" if every and self.round_id % every == 0 else "normal"
         self.round_lang, self.round_level = self.lang, self.level
         used = self.used.setdefault(self.lang, set())
-        self.secret, self.tier = self.sem.pick_secret(self._next_tier(), used)
+        item = self._take_custom()
+        if item:                                     # a viewer's word: always the normal dictionary
+            self.round_level = 2
+            self.secret = item["word"]
+            self.setter = {"id": item["tiktok_id"].lower(), "name": item["name"]}
+            self.played_custom.append(item["id"])
+        else:
+            self.secret, self.tier = self.sem.pick_secret(self._next_tier(), used)
         used.add(self.secret)
         self.store.save(self.USED, {k: sorted(v) for k, v in self.used.items()})
         self.rank, self.order = self.sem.ranking(self.secret)
@@ -167,6 +182,9 @@ class GuessGame(BaseGame):
         dur = config.SPEED_ROUND_DURATION if self.round_type == "speed" else self.round_sec
         self.started_at, self.ends_at = now, now + dur
         self.emit("round_start", round=self.round_id, roundType=self.round_type, duration=dur)
+        if self.setter:
+            self.setter_t = now
+            self.emit("custom_word", name=self.setter["name"])
 
     def _next_tier(self):
         """Dynamic difficulty: quick wins -> harder words, nobody close -> easier."""
@@ -214,7 +232,8 @@ class GuessGame(BaseGame):
             "word": self.secret, "reason": reason, "winner": player.name if player else None,
             "seconds": round(now - self.started_at), "players": len(self.players),
             "guesses": sum(p.guesses for p in self.players.values()), "at": int(now),
-            "podium": [p["name"] for p in self.podium]}])[-300:]
+            "podium": [p["name"] for p in self.podium],
+            "setter": self.setter["name"] if self.setter else None}])[-300:]
         self.store.save(self.ROUNDS, self.history)
         print(f"[guess] round {self.round_id} {reason}: word={self.secret} "
               f"winner={player.name if player else '-'}")
@@ -241,6 +260,8 @@ class GuessGame(BaseGame):
         if cmd in MAO_CALL_WORDS:                        # "мао внимание": never a guess
             self.call_host(viewer)
             return
+        if self.setter and (viewer.id or "").lower() == self.setter["id"] and self.phase in (COUNTDOWN, PLAYING):
+            return                                       # who picked the word can't guess it
         if not self.sem or self.phase not in (PLAYING, WINNER):
             return
         now = time.time()
@@ -588,6 +609,9 @@ class GuessGame(BaseGame):
                         self.leader_id = None
                     self._update_leader()
                     self.dirty = True
+            if self.setter and now - self.setter_t >= SETTER_TICKER_SEC:
+                self.setter_t = now
+                self.emit("custom_ticker", name=self.setter["name"])
             if now >= self.ends_at:
                 self._finish(now, "timeout")
             elif config.AUTO_HINT and not self.auto_hint_done and \
@@ -707,6 +731,39 @@ class GuessGame(BaseGame):
         print(f"[guess] {viewer.name} calls Mao")
         return True
 
+    # ------------------------------------------------------------------ words picked by viewers (bot)
+    def queue_custom(self, item):
+        """A viewer's word from the bot -> (ok, dictionary word, round it will be played in)."""
+        sem = self.sems.get(self.lang) or self.sems.get(self.lang + "-easy")
+        word = sem.normalize(item.get("word", ""))[0] if sem else None
+        if not word:
+            try:
+                with open(self.store.path(self.MISSING), "a", encoding="utf-8") as f:
+                    f.write(json.dumps({"at": int(time.time()), "word": item.get("word", ""), "lang": self.lang,
+                                        "by": item.get("tiktok_id", "")}, ensure_ascii=False) + "\n")
+            except Exception as e:
+                print(f"[guess] can't log a missing word: {e}")
+            print(f"[guess] {item.get('name')}'s word '{item.get('word')}' isn't in the dictionary")
+            return False, None, None
+        self.custom.append({"id": item["id"], "word": word, "lang": self.lang, "name": item.get("name", ""),
+                            "tiktok_id": item.get("tiktok_id", "")})
+        self.store.save(self.CUSTOM, self.custom)
+        rnd = self.round_id + len(self.custom)           # the next round is round_id + 1
+        print(f"[guess] {item.get('name')} picked '{word}' for round {rnd}")
+        return True, word, rnd
+
+    def cancel_custom(self, cid):
+        self.custom = [c for c in self.custom if c["id"] != cid]
+        self.store.save(self.CUSTOM, self.custom)
+
+    def _take_custom(self):
+        for c in self.custom:
+            if c["lang"] == self.lang and c["word"] in (self.sems.get(self.lang) or self.sem).index:
+                self.custom.remove(c)
+                self.store.save(self.CUSTOM, self.custom)
+                return c
+        return None
+
     def _round_champion_ids(self):
         """Three different players: whoever named the table's best words first, going down the table
         (if one player named the top 3, the authors of the 4th, 5th... words get the other places).
@@ -791,6 +848,7 @@ class GuessGame(BaseGame):
             "finished_at": self.finished_at, "difficulty": self.difficulty,
             "saved_at": self.paused_at or time.time(), "lang": self.round_lang,
             "level": self.round_level, "next_level": self.level,
+            "setter": self.setter, "setter_t": self.setter_t,
         })
 
     def load(self):
@@ -825,6 +883,7 @@ class GuessGame(BaseGame):
             self.hints = d.get("hints", [])
             self.auto_hint_done = d.get("auto_hint_done", False)
             self.finished_at = d.get("finished_at", 0.0)
+            self.setter, self.setter_t = d.get("setter"), d.get("setter_t", 0.0)
             self.paused_at = d.get("saved_at")         # timers resume on activation
             print(f"[guess] restored round {self.round_id} ({self.phase})")
         except Exception as e:

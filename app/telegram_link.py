@@ -20,6 +20,7 @@ KEY_RE = re.compile(r"ключ-тг-[A-Za-z0-9_-]{8}", re.IGNORECASE)
 LINK_COMMANDS = {"настроить связь", "link up"}    # never the messenger's name: TikTok may filter it
 OFFLINE_STOP_SEC = 10 * 60         # LIVE offline that long -> the stream word is released
 LINK_COOLDOWN_SEC = 60            # "настроить связь": after anyone calls it, nobody can for a minute
+POLL_SEC = 10                     # asking the bot for words viewers picked (only while LIVE)
 
 
 def norm(text):
@@ -33,6 +34,7 @@ class TelegramLink:
         self.bot = ""
         self.offline_since = None
         self.info_t = 0.0
+        self.results = []             # dictionary checks of picked words, not yet delivered to the bot
 
     async def api(self, path, **body):
         import httpx
@@ -79,4 +81,30 @@ class TelegramLink:
                     await self.api("/game/stream/stop")
                     print(f"[telegram] stream word {self.word} released")
                     self.word = ""
-            await asyncio.sleep(15)
+            if self.word and not self.hub.closed:
+                await self.poll()
+            await asyncio.sleep(POLL_SEC)
+
+    async def poll(self):
+        """Words viewers picked for the guess game ("загадывает" in the bot): take new ones, check them in
+        the dictionary, answer with the round; drop the ones the host rejected; report started rounds."""
+        g = self.hub.games.get("guess")
+        if not g:
+            return
+        played, g.played_custom = g.played_custom, []
+        r = await self.api("/game/poll", results=self.results, played=played)
+        if "error" in r:
+            g.played_custom = played + g.played_custom          # retry next time
+            return
+        self.results = []
+        for cid in r.get("cancel") or []:
+            g.cancel_custom(cid)
+        for w in r.get("words") or []:
+            ok, word, rnd = g.queue_custom(w)
+            self.results.append({"id": w["id"], "ok": ok, "word": word, "round": rnd})
+        if self.results:                                         # answer right away, not in 10 s
+            r = await self.api("/game/poll", results=self.results)
+            if "error" not in r:
+                self.results = []
+                for cid in r.get("cancel") or []:
+                    g.cancel_custom(cid)

@@ -736,5 +736,39 @@ class TelegramLinkTest(unittest.TestCase):
         self.assertFalse(link.on_comment(v, "огурец"))                 # an ordinary guess goes to the game
 
 
+class CustomWordTest(unittest.TestCase):
+    def test_viewer_picked_word(self):
+        import json as _json
+        store = JsonStore(tempfile.mkdtemp())
+        g = GuessGame(store)
+        g.set_lang("ru")
+        ok, word, rnd = g.queue_custom({"id": "a1", "word": "Огурцы", "name": "воробей", "tiktok_id": "Vorobey"})
+        self.assertEqual((ok, word, rnd), (True, "огурец", g.round_id + 1))
+        self.assertEqual(g.queue_custom({"id": "a2", "word": "кошка", "name": "сова", "tiktok_id": "sova"})[2],
+                         g.round_id + 2)
+        g.cancel_custom("a2")
+        ok, word, rnd = g.queue_custom({"id": "a3", "word": "абырвалг", "name": "сова", "tiktok_id": "sova"})
+        self.assertFalse(ok)
+        with open(store.path(g.MISSING), encoding="utf-8") as f:
+            self.assertEqual(_json.loads(f.readline())["word"], "абырвалг")
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        self.assertEqual(g.secret, "огурец")
+        self.assertEqual(g.played_custom, ["a1"])
+        self.assertEqual(g.custom, [])
+        types = [e["type"] for e in g.events]
+        self.assertIn("custom_word", types)
+        g.on_comment(Viewer("vorobey", "воробей", "", 1), "огурец")      # the picker can't guess it
+        self.assertIsNone(g.winner)
+        g.ends_at = time.time() + 999
+        g.setter_t -= guess_mod.SETTER_TICKER_SEC + 1
+        g.tick(time.time())
+        self.assertEqual(g.events[-1]["type"], "custom_ticker")
+        g.on_comment(Viewer("ivan", "Иван", "", 1), "огурец")
+        self.assertEqual(g.winner["name"], "Иван")
+        self.assertEqual(g.history[-1]["setter"], "воробей")
+        g.tick(time.time() + 10**6); g.tick(time.time() + 2 * 10**6); g.tick(time.time() + 3 * 10**6)
+        self.assertIsNone(g.setter)                                       # the next round is a normal one
+
+
 if __name__ == "__main__":
     unittest.main()

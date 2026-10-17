@@ -199,6 +199,13 @@
         toast('📲 ' + (e.bot ? '@' + e.bot : ''), t('g.t.tgWord', { w: clean(e.word) }), '#2aabee', { important: true, hold: 6 });
         queueTicker(t('g.tk.tg', { bot: esc(e.bot ? '@' + e.bot : ''), w: esc(e.word) }));
         break;
+      case 'custom_word':                        // a viewer picked this round's word (via the bot)
+        toast('🎯 ' + clean(e.name), t('g.t.customWord'), 'var(--orange)', { important: true, hold: 5 });
+        queueTicker(t('g.tk.custom', { name: esc(clean(e.name)) }));
+        break;
+      case 'custom_ticker':
+        queueTicker(t('g.tk.custom', { name: esc(clean(e.name)) }));
+        break;
       case 'tg_linked':
         mini(t('g.t.tgLinked', { name }), 'follow');
         break;
