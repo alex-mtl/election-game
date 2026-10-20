@@ -86,13 +86,13 @@ class TelegramLink:
             await asyncio.sleep(POLL_SEC)
 
     async def poll(self):
-        """Words viewers picked for the guess game ("загадывает" in the bot): take new ones, check them in
-        the dictionary, answer with the round; drop the ones the host rejected; report started rounds."""
+        """Words viewers offer for the guess game (via the bot): check new ones in the dictionary, queue the
+        ones the host accepted and answer with the round; drop rejected ones; report started rounds."""
         g = self.hub.games.get("guess")
         if not g:
             return
         played, g.played_custom = g.played_custom, []
-        r = await self.api("/game/poll", results=self.results, played=played)
+        r = await self.api("/game/poll", v=2, results=self.results, played=played)
         if "error" in r:
             g.played_custom = played + g.played_custom          # retry next time
             return
@@ -100,8 +100,12 @@ class TelegramLink:
         for cid in r.get("cancel") or []:
             g.cancel_custom(cid)
         for w in r.get("words") or []:
-            ok, word, rnd = g.queue_custom(w)
-            self.results.append({"id": w["id"], "ok": ok, "word": word, "round": rnd})
+            if w.get("action") == "queue":                       # the host accepted it: into the queue
+                ok, word, rnd = g.queue_custom(w)
+                self.results.append({"id": w["id"], "stage": "queue", "ok": ok, "word": word, "round": rnd})
+            else:                                                # new: only the dictionary check
+                ok, word = g.check_custom(w)
+                self.results.append({"id": w["id"], "stage": "check", "ok": ok, "word": word})
         if self.results:                                         # answer right away, not in 10 s
             r = await self.api("/game/poll", results=self.results)
             if "error" not in r:

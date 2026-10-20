@@ -822,8 +822,9 @@ class GuessGame(BaseGame):
         return dict(lr, word=None) if lr.get("hidden") else lr
 
     # ------------------------------------------------------------------ words picked by viewers (bot)
-    def queue_custom(self, item):
-        """A viewer's word from the bot -> (ok, dictionary word, round it will be played in)."""
+    def check_custom(self, item):
+        """A viewer's word from the bot: is it in the dictionary? -> (ok, dictionary word). Not queued:
+        the host decides first."""
         sem = self.sems.get(self.lang) or self.sems.get(self.lang + "-easy")
         word = sem.normalize(item.get("word", ""))[0] if sem else None
         if not word:
@@ -834,6 +835,13 @@ class GuessGame(BaseGame):
             except Exception as e:
                 print(f"[guess] can't log a missing word: {e}")
             print(f"[guess] {item.get('name')}'s word '{item.get('word')}' isn't in the dictionary")
+            return False, None
+        return True, word
+
+    def queue_custom(self, item):
+        """A word the host accepted -> (ok, dictionary word, round it will be played in)."""
+        ok, word = self.check_custom(item)
+        if not ok:
             return False, None, None
         self.custom.append({"id": item["id"], "word": word, "lang": self.lang, "name": item.get("name", ""),
                             "tiktok_id": item.get("tiktok_id", "")})

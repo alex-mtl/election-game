@@ -753,6 +753,8 @@ class CustomWordTest(unittest.TestCase):
         g.cancel_custom("a2")
         ok, word, rnd = g.queue_custom({"id": "a3", "word": "абырвалг", "name": "сова", "tiktok_id": "sova"})
         self.assertFalse(ok)
+        self.assertEqual(g.check_custom({"id": "a4", "word": "Кошки"}), (True, "кошка"))   # checked, not queued
+        self.assertEqual([c["id"] for c in g.custom], ["a1"])
         with open(store.path(g.MISSING), encoding="utf-8") as f:
             self.assertEqual(_json.loads(f.readline())["word"], "абырвалг")
         g.tick(time.time()); g.tick(time.time() + 0.01)
