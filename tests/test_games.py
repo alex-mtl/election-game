@@ -924,6 +924,7 @@ class TelegramPollTest(unittest.TestCase):
         asyncio.run(link.poll())
         self.assertEqual(bodies[-1]["credits"], {"vorobey": 2})
         self.assertEqual(bodies[-1]["unguessed"][0]["word"], "огурец")
+        self.assertEqual(bodies[-1]["queue_ids"], [])                      # the game's real queue
         asyncio.run(link.poll())
         self.assertEqual((bodies[-1]["credits"], bodies[-1]["unguessed"]), ({}, []))   # only changes
         g.add_credits("vorobey", -2)                                       # spent: the bot hears 0

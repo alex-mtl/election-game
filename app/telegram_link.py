@@ -97,7 +97,7 @@ class TelegramLink:
         credits = {k: v for k, v in g.credits.items() if self.sent_credits.get(k) != v}
         credits.update({k: 0 for k in self.sent_credits if k not in g.credits and self.sent_credits[k]})
         r = await self.api("/game/poll", v=2, results=self.results, played=played, unguessed=unguessed,
-                           credits=credits)
+                           credits=credits, queue_ids=[c["id"] for c in g.custom])
         if "error" in r:
             g.played_custom = played + g.played_custom          # retry next time
             g.unguessed_custom = unguessed + g.unguessed_custom
@@ -114,7 +114,7 @@ class TelegramLink:
                 ok, word = g.check_custom(w)
                 self.results.append({"id": w["id"], "stage": "check", "ok": ok, "word": word})
         if self.results:                                         # answer right away, not in 10 s
-            r = await self.api("/game/poll", results=self.results)
+            r = await self.api("/game/poll", results=self.results, queue_ids=[c["id"] for c in g.custom])
             if "error" not in r:
                 self.results = []
                 for cid in r.get("cancel") or []:
