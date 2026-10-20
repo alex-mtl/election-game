@@ -26,9 +26,13 @@ class SemanticIndex:
         self.words = [w.strip() for w in raw.decode("utf-8").splitlines() if w.strip()]
         self.vocab_hash = hashlib.sha1(raw).hexdigest()[:12]     # the ranker Lambda reports the same
         self.index = {w: i for i, w in enumerate(self.words)}
-        emb = np.load(os.path.join(assets_dir, "embeddings.npy")).astype(np.float32)
-        emb /= np.linalg.norm(emb, axis=1, keepdims=True) + 1e-9
-        self.emb = emb
+        # the game image has no embeddings: rankings come from the word-ranker Lambda (tests have them)
+        path = os.path.join(assets_dir, "embeddings.npy")
+        self.emb = None
+        if os.path.exists(path):
+            emb = np.load(path).astype(np.float32)
+            emb /= np.linalg.norm(emb, axis=1, keepdims=True) + 1e-9
+            self.emb = emb
         with open(os.path.join(assets_dir, "meta.json"), encoding="utf-8") as f:
             meta = json.load(f)
         self.aliases = meta.get("aliases", {})
@@ -78,7 +82,9 @@ class SemanticIndex:
         return tokens if 2 <= len(tokens) <= limit else None
 
     def ranking(self, secret):
-        """rank[i] = 1-based position of vocab word i by similarity to secret."""
+        """rank[i] = 1-based position of vocab word i by similarity to secret (needs the embeddings)."""
+        if self.emb is None:
+            raise RuntimeError("no embeddings here: the ranking comes from the word-ranker Lambda")
         sims = self.emb @ self.emb[self.index[secret]]
         order = np.argsort(-sims, kind="stable")
         if order[0] != self.index[secret]:          # exact word is always #1

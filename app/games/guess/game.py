@@ -118,6 +118,9 @@ class GuessGame(BaseGame):
         self.next_pick = None                        # (lang, level, word, tier) picked ahead for the next round
         self.ranks = {}                              # (dict, word) -> rank array from the ranker Lambda
         self.rank_source = ""                        # "lambda" | "local": where this round's table came from
+        self.restore_wait = False                    # restored round waits for its table (timers stopped)
+        self.resume_on_table = False                 # ... and resumes when it comes, if the game is active
+        self.waiting_since = 0.0                     # next round waits for its table since
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
         if isinstance(used, list):                   # old format: English only
@@ -282,7 +285,7 @@ class GuessGame(BaseGame):
             return
         if self.setter and (viewer.id or "").lower() == self.setter["id"] and self.phase in (COUNTDOWN, PLAYING):
             return                                       # who picked the word can't guess it
-        if not self.sem or self.phase not in (PLAYING, WINNER):
+        if not self.sem or self.phase not in (PLAYING, WINNER) or self.rank is None:
             return
         now = time.time()
         # "подсказка" / "hint" (any language, any case) from a viewer with hints on account
@@ -436,7 +439,7 @@ class GuessGame(BaseGame):
         """Auto hints rotate types and respect a cooldown. A gift hint (viewer given) is always
         a close word, has no cooldown, and that word counts as the gifter's own guess."""
         now = now or time.time()
-        if self.phase != PLAYING or not self.secret:
+        if self.phase != PLAYING or not self.secret or self.rank is None:
             return None
         if viewer is None and now - self.last_hint_t < config.HINT_COOLDOWN_SEC:
             return None
@@ -531,6 +534,10 @@ class GuessGame(BaseGame):
     # ------------------------------------------------------------------ lifecycle
     def on_activate(self):
         now = time.time()
+        if self.restore_wait:                             # resumes when the table comes (put_ranking)
+            self.resume_on_table = True
+            self.dirty = True
+            return
         if self.paused_at:                                # resume timers where they stopped
             shift = now - self.paused_at
             self.started_at += shift
@@ -616,6 +623,14 @@ class GuessGame(BaseGame):
         if not self.sem or self.paused_at:
             return
         if self.phase in (IDLE, FINISHED):
+            if not self._table_ready():                  # no embeddings here: wait for the ranker Lambda
+                if not self.waiting_since:
+                    self.waiting_since = now
+                    print("[guess] waiting for the next round's table from the ranker")
+                return
+            if self.waiting_since:
+                print(f"[guess] table came after {now - self.waiting_since:.0f}s of waiting")
+                self.waiting_since = 0.0
             self._start_countdown(now)
         elif self.phase == COUNTDOWN and now >= self.phase_until:
             self._start_playing(now)
@@ -654,7 +669,7 @@ class GuessGame(BaseGame):
 
     # ------------------------------------------------------------------ simulation / debug
     def simulate_step(self):
-        if self.phase != PLAYING:
+        if self.phase != PLAYING or self.rank is None:       # no table yet (waiting for the ranker)
             return 0.5
         now = time.time()
         progress = (now - self.started_at) / max(1, self.ends_at - self.started_at)
@@ -763,20 +778,38 @@ class GuessGame(BaseGame):
         return self.sems[self.dict_key(lang, level)]
 
     def planned_next(self):
-        """(dict, word, vocab hash) whose ranking the next round will need, or None"""
-        if self.phase not in (WINNER, REVEAL, FINISHED):
+        """(dict, word, vocab hash) whose ranking the game needs next, or None"""
+        if self.restore_wait and self.secret:          # the restored round's own table
+            key = self.dict_key(self.round_lang, self.round_level)
+            return key, self.secret, self.sems[key].vocab_hash
+        if self.phase not in (IDLE, WINNER, REVEAL, FINISHED):
             return None
         for c in self.custom:                         # a viewer's word goes first (normal dictionary)
             if c["lang"] == self.lang and c["word"] in self.sem_for(self.lang, 2).index:
                 key = self.dict_key(self.lang, 2)
                 return key, c["word"], self.sems[key].vocab_hash
-        if self.next_pick and self.next_pick[:2] == (self.lang, self.level):
-            key = self.dict_key(self.lang, self.level)
-            return key, self.next_pick[2], self.sems[key].vocab_hash
-        return None
+        used = self.used.get(self.lang, set())
+        if not self.next_pick or self.next_pick[:2] != (self.lang, self.level) or self.next_pick[2] in used:
+            self.next_pick = (self.lang, self.level) + tuple(self.sem_for(self.lang, self.level)
+                                                            .pick_secret(self._next_tier(), used))
+        key = self.dict_key(self.lang, self.level)
+        return key, self.next_pick[2], self.sems[key].vocab_hash
+
+    def _table_ready(self):
+        plan = self.planned_next()
+        return not plan or plan[:2] in self.ranks or self.sems[plan[0]].emb is not None
 
     def put_ranking(self, key, word, rank):
-        self.ranks[(key, word)] = np.asarray(rank, dtype=np.int32)
+        rank = np.asarray(rank, dtype=np.int32)
+        if self.restore_wait and word == self.secret and key == self.dict_key(self.round_lang, self.round_level):
+            self.rank, self.order = rank, np.argsort(rank, kind="stable")
+            self.restore_wait = False
+            print(f"[guess] round {self.round_id} restored with the ranker's table")
+            if self.resume_on_table:
+                self.resume_on_table = False
+                self.on_activate()
+            return
+        self.ranks[(key, word)] = rank
 
     def _shown_word(self):
         """the secret for the screen; a viewer's word nobody found stays secret"""
@@ -926,7 +959,10 @@ class GuessGame(BaseGame):
             self.phase = d["phase"]
             self.round_type = d.get("round_type", "normal")
             self.secret = secret
-            self.rank, self.order = self.sem.ranking(secret)
+            if self.sem.emb is not None:
+                self.rank, self.order = self.sem.ranking(secret)
+            else:                                        # the table comes from the ranker; timers wait
+                self.restore_wait = True
             self.started_at, self.ends_at = d["started_at"], d["ends_at"]
             self.phase_until = d["phase_until"]
             self.guesses = d.get("guesses", {})

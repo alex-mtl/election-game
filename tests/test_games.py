@@ -796,7 +796,7 @@ class RankerPrefetchTest(unittest.TestCase):
     def test_prefetched_table_is_used(self):
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
         g.set_lang("ru")
-        self.assertIsNone(g.planned_next())                        # nothing to prepare before a round ends
+        self.assertEqual(g.planned_next()[0], "ru")                 # the first round is planned too
         g.tick(time.time()); g.tick(time.time() + 0.01)
         self.assertEqual(g.rank_source, "local")
         self.finish(g)
@@ -849,6 +849,55 @@ class RankerPrefetchTest(unittest.TestCase):
             self.assertIsNone(asyncio.run(c.fetch("fr", "w", "abc")))   # no Lambda for that language
         finally:
             httpx.AsyncClient = real
+
+
+class NoEmbeddingsTest(unittest.TestCase):
+    """The game image has no embeddings: rounds wait for the ranker's table."""
+    def setUp(self):
+        import shutil
+        self.full = GuessGame(JsonStore(tempfile.mkdtemp()))         # the ranker's view (with embeddings)
+        self.dir = tempfile.mkdtemp()
+        for d in ("ru", "ru-easy"):
+            os.makedirs(os.path.join(self.dir, d))
+            for f in ("vocab.txt", "meta.json", "secret_nouns.txt"):
+                shutil.copy(os.path.join(config.ASSETS_DIR, d, f), os.path.join(self.dir, d, f))
+        self.real, config.ASSETS_DIR = config.ASSETS_DIR, self.dir
+
+    def tearDown(self):
+        config.ASSETS_DIR = self.real
+
+    def lambda_table(self, g):
+        key, word, vh = g.planned_next()
+        self.assertEqual(vh, self.full.sems[key].vocab_hash)
+        g.put_ranking(key, word, self.full.sems[key].ranking(word)[0].astype("<u2"))
+        return word
+
+    def test_waits_for_the_table_and_restores(self):
+        store = JsonStore(tempfile.mkdtemp())
+        g = GuessGame(store)
+        g.set_lang("ru")
+        self.assertIsNone(g.sem.emb)
+        g.tick(time.time())
+        self.assertEqual(g.phase, guess_mod.IDLE)                   # no table yet: the round waits
+        word = self.lambda_table(g)
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        self.assertEqual((g.phase, g.secret, g.rank_source), (guess_mod.PLAYING, word, "lambda"))
+        g.on_comment(Viewer("a", "A", "", 1), g.sem.words[int(g.order[7])])
+        self.assertEqual(g.players["a"].best, 8)
+        left = g.ends_at - time.time()
+        g.save()
+        g2 = GuessGame(store)                                       # restart mid-round
+        g2.on_activate()
+        self.assertTrue(g2.restore_wait)
+        g2.on_comment(Viewer("b", "B", "", 1), g.sem.words[3])        # no table: not counted yet
+        self.assertNotIn("b", g2.players)
+        g2.tick(time.time() + 50)                                   # timers stopped while waiting
+        self.assertEqual(g2.phase, guess_mod.PLAYING)
+        self.assertEqual(self.lambda_table(g2), word)
+        self.assertFalse(g2.restore_wait)
+        self.assertAlmostEqual(g2.ends_at - time.time(), left, delta=2)   # the round goes on where it stopped
+        g2.on_comment(Viewer("c", "C", "", 1), word)
+        self.assertEqual(g2.winner["name"], "C")
 
 
 if __name__ == "__main__":

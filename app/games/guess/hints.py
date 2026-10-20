@@ -53,7 +53,7 @@ def letter(game, n_given):
 def distance(game, n_given):
     """'The secret word is within the TOP N of <best guess>'."""
     best = min((g for g in game.guesses.values() if g["rank"] > 1), key=lambda g: g["rank"], default=None)
-    if not best:
+    if not best or game.sem.emb is None:             # needs the embeddings (not in the game image)
         return None
     rank, _ = game.sem.ranking(best["word"])
     pos = int(rank[game.sem.index[game.secret]])
