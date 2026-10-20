@@ -1,0 +1,10 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Sid": "Logs", "Effect": "Allow",
+     "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+     "Resource": "arn:aws:logs:us-east-1:565905128720:log-group:/aws/lambda/word-ranker-*"},
+    {"Sid": "GameKeys", "Effect": "Allow", "Action": "dynamodb:GetItem",
+     "Resource": "arn:aws:dynamodb:us-east-1:565905128720:table/tiktok-tg-bot"}
+  ]
+}
