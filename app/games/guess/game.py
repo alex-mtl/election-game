@@ -174,7 +174,8 @@ class GuessGame(BaseGame):
         if item:                                     # a viewer's word: always the normal dictionary
             self.round_level = 2
             self.secret = item["word"]
-            self.setter = {"id": item["tiktok_id"].lower(), "name": item["name"], "cid": item["id"]}
+            sid = item["tiktok_id"].lower()                 # the nickname now, not as it was when picked
+            self.setter = {"id": sid, "name": getattr(self, "names", {}).get(sid) or item["name"], "cid": item["id"]}
             self.played_custom.append(item["id"])
         else:
             nxt, self.next_pick = self.next_pick, None

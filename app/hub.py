@@ -47,6 +47,9 @@ class Hub:
         self.feed_seq = 0
         self.feed_sent = 0
         self.greeted = set()                      # viewers already welcomed this stream
+        self.names = {}                           # viewer id -> their TikTok nickname as of their last event
+        for g in self.games.values():
+            g.names = self.names
         self.balloons = LikeBalloons(store)       # like balloons fly over every page
         self.closed = False                       # set on shutdown: incoming events are ignored
         self.game.on_activate()
@@ -123,9 +126,15 @@ class Hub:
         e.update(seq=self.feed_seq, t=time.time())
         self.feed.append(e)
 
+    def _seen(self, v):
+        """nicknames change: every event carries the current one"""
+        if v.id and v.name:
+            self.names[v.id.lower()] = v.name
+
     def comment(self, v: Viewer, text, ts=None):
         if self.closed:                               # shutting down: nothing changes any more
             return
+        self._seen(v)
         self._feed(type="chat", name=v.name, avatar=v.avatar, text=text[:200], sent=ts,
                    host=v.id.lower() == config.TIKTOK_USERNAME.lower())
         if self.tg and self.tg.on_comment(v, text):  # "настроить связь" / a Telegram key: not a guess
@@ -135,6 +144,7 @@ class Hub:
     def join(self, v: Viewer):
         if self.closed:                               # shutting down: nothing changes any more
             return
+        self._seen(v)
         # welcome each viewer once per stream (pages throttle and merge the greetings)
         if config.GREET_JOINS and v.id not in self.greeted and v.id.lower() != config.TIKTOK_USERNAME.lower():
             if len(self.greeted) > 20000:
@@ -148,6 +158,7 @@ class Hub:
         or co-host on the same live is just shown."""
         if self.closed:                               # shutting down: nothing changes any more
             return
+        self._seen(v)
         self._feed(type="gift", name=v.name, avatar=v.avatar, gift=gift, count=count, to=to)
         self._journal_gift(v, gift, count, to)
         if to and to.lower() != config.TIKTOK_USERNAME.lower():
@@ -169,11 +180,13 @@ class Hub:
     def follow(self, v: Viewer):
         if self.closed:                               # shutting down: nothing changes any more
             return
+        self._seen(v)
         self.game.on_follow(v)
 
     def like(self, v: Viewer, count):
         if self.closed:                               # shutting down: nothing changes any more
             return
+        self._seen(v)
         before = self.balloons.total_of(v.id)
         for b in self.balloons.on_like(v, count):  # 100 likes -> lift off, on whatever page is open
             self._feed(type="balloon", **b)

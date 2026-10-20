@@ -780,7 +780,9 @@ class CustomWordTest(unittest.TestCase):
         g = GuessGame(JsonStore(tempfile.mkdtemp()))
         g.set_lang("ru")
         g.queue_custom({"id": "b1", "word": "огурец", "name": "воробей", "tiktok_id": "vorobey"})
+        g.names = {"vorobey": "Соловей"}                                  # renamed since: the toast uses the new name
         g.tick(time.time()); g.tick(time.time() + 0.01)
+        self.assertEqual([e for e in g.events if e["type"] == "custom_word"][-1]["name"], "Соловей")
         g.tick(g.ends_at + 0.1)                                           # timeout
         self.assertIsNone(g.winner)
         self.assertEqual(g.credits.get("vorobey"), 1)                     # the picker earns a hint
@@ -927,6 +929,11 @@ class TelegramPollTest(unittest.TestCase):
         self.assertEqual(bodies[-1]["queue_ids"], [])                      # the game's real queue
         asyncio.run(link.poll())
         self.assertEqual((bodies[-1]["credits"], bodies[-1]["unguessed"]), ({}, []))   # only changes
+        hub.comment(Viewer("C.Talin", "ДОН", ""), "привет")                # the nickname as of now
+        asyncio.run(link.poll())
+        self.assertEqual(bodies[-1]["names"], {"c.talin": "ДОН"})
+        asyncio.run(link.poll())
+        self.assertEqual(bodies[-1]["names"], {})                          # only new / changed ones
         g.add_credits("vorobey", -2)                                       # spent: the bot hears 0
         asyncio.run(link.poll())
         self.assertEqual(bodies[-1]["credits"], {"vorobey": 0})
