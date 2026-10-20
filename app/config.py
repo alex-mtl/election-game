@@ -83,4 +83,7 @@ GOAL_LABEL = os.getenv("GOAL_LABEL", "FOLLOW GOAL")
 # ---- telegram bot (project tiktok-tg-bot on AWS); empty = off ----
 TG_BOT_URL = os.getenv("TG_BOT_URL", "")
 TG_GAME_KEY = os.getenv("TG_GAME_KEY", "")
+# ---- word-ranker Lambdas (next round's table during the break): "en=https://...,ru=https://..."; empty = off ----
+RANKER_URLS = dict(x.split("=", 1) for x in _list("RANKER_URLS") if "=" in x)
+RANKER_KEY = os.getenv("RANKER_KEY", "") or TG_GAME_KEY
 GOAL_TARGET = _i("GOAL_TARGET", 0)                       # follows this stream; 0 hides the goal bar

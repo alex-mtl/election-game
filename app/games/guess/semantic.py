@@ -1,6 +1,7 @@
 """Semantic index over the precomputed vocabulary (no model needed at runtime:
 every guessable word already has an embedding, built by tools/build_assets.py)."""
 
+import hashlib
 import json
 import os
 import random
@@ -20,8 +21,10 @@ ELISION = re.compile(r"^(?:l|d|j|m|n|s|t|c|qu)'")      # French: l'arbre -> arbr
 class SemanticIndex:
     def __init__(self, assets_dir, lang="en"):
         self.lang = lang
-        with open(os.path.join(assets_dir, "vocab.txt"), encoding="utf-8") as f:
-            self.words = [w.strip() for w in f if w.strip()]
+        with open(os.path.join(assets_dir, "vocab.txt"), "rb") as f:
+            raw = f.read()
+        self.words = [w.strip() for w in raw.decode("utf-8").splitlines() if w.strip()]
+        self.vocab_hash = hashlib.sha1(raw).hexdigest()[:12]     # the ranker Lambda reports the same
         self.index = {w: i for i, w in enumerate(self.words)}
         emb = np.load(os.path.join(assets_dir, "embeddings.npy")).astype(np.float32)
         emb /= np.linalg.norm(emb, axis=1, keepdims=True) + 1e-9

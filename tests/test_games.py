@@ -7,6 +7,8 @@ import tempfile
 import time
 import unittest
 
+import numpy as np
+
 from app import config
 from app.games.base import Viewer
 from app.games.battle.game import BattleGame
@@ -784,6 +786,69 @@ class CustomWordTest(unittest.TestCase):
         self.assertEqual(g.history[-1]["word"], "огурец")                 # kept in the log on disk
         g.tick(g.phase_until + 0.1)                                       # -> reveal
         self.assertIsNone(g.events[-1]["word"])
+
+
+class RankerPrefetchTest(unittest.TestCase):
+    def finish(self, g):
+        g.tick(g.ends_at + 0.1)                                    # timeout -> WINNER, next word picked
+        self.assertEqual(g.phase, guess_mod.WINNER)
+
+    def test_prefetched_table_is_used(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.set_lang("ru")
+        self.assertIsNone(g.planned_next())                        # nothing to prepare before a round ends
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        self.assertEqual(g.rank_source, "local")
+        self.finish(g)
+        key, word, vh = g.planned_next()
+        self.assertEqual((key, vh), ("ru", g.sems["ru"].vocab_hash))
+        rank, _ = g.sems["ru"].ranking(word)
+        g.put_ranking(key, word, rank.astype("<u2"))               # what the Lambda would return
+        g.phase = guess_mod.FINISHED
+        g.tick(time.time())
+        self.assertEqual((g.secret, g.rank_source), (word, "lambda"))
+        self.assertTrue(np.array_equal(g.rank, rank))
+        self.assertEqual(int(g.rank[g.sem.index[word]]), 1)
+        self.assertEqual(g.ranks, {})
+
+    def test_viewer_word_first_and_local_fallback(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.set_lang("ru")
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        self.finish(g)
+        g.queue_custom({"id": "c1", "word": "огурец", "name": "воробей", "tiktok_id": "vorobey"})
+        self.assertEqual(g.planned_next()[:2], ("ru", "огурец"))
+        g.phase = guess_mod.FINISHED
+        g.tick(time.time())                                        # no table arrived: computed locally
+        self.assertEqual((g.secret, g.rank_source), ("огурец", "local"))
+
+    def test_client_decodes_and_checks_vocab(self):
+        import asyncio, base64, gzip
+        from app.ranker_client import RankerClient
+        rank = np.arange(1, 6, dtype="<u2")
+        packed = base64.b64encode(gzip.compress(rank.tobytes())).decode()
+
+        class Resp:
+            status_code = 200
+            def __init__(self, vocab): self.vocab = vocab
+            def json(self): return {"vocab": self.vocab, "rank": packed}
+
+        class Client:
+            vocab = "abc"
+            def __init__(self, **kw): pass
+            async def __aenter__(self): return self
+            async def __aexit__(self, *a): pass
+            async def post(self, url, json, headers): return Resp(Client.vocab)
+        import httpx
+        real, httpx.AsyncClient = httpx.AsyncClient, Client
+        try:
+            c = RankerClient(None, {"ru": "http://x"}, "k")
+            self.assertTrue(np.array_equal(asyncio.run(c.fetch("ru-easy", "w", "abc")), rank))
+            Client.vocab = "other"                                 # another dictionary version: not used
+            self.assertIsNone(asyncio.run(c.fetch("ru", "w", "abc")))
+            self.assertIsNone(asyncio.run(c.fetch("fr", "w", "abc")))   # no Lambda for that language
+        finally:
+            httpx.AsyncClient = real
 
 
 if __name__ == "__main__":

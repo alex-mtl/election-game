@@ -30,6 +30,9 @@ async def run(simulate):
         from .telegram_link import TelegramLink
         hub.tg = TelegramLink(hub, config.TG_BOT_URL, config.TG_GAME_KEY)
         tasks.append(hub.tg.run())
+    if config.RANKER_URLS and config.RANKER_KEY:
+        from .ranker_client import RankerClient
+        tasks.append(RankerClient(hub, config.RANKER_URLS, config.RANKER_KEY).run())
     print(f"[web] open http://localhost:{config.PORT}/ (phone: http://<this-PC-IP>:{config.PORT}/)")
 
     bg = [asyncio.create_task(t) for t in tasks]

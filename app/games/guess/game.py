@@ -15,6 +15,8 @@ import re
 import time
 from collections import deque
 
+import numpy as np
+
 from ... import config
 from ..base import BaseGame, Viewer
 from . import hints
@@ -113,6 +115,9 @@ class GuessGame(BaseGame):
         self.mao_call_t = 0.0                        # last "мао внимание"
         self.custom = store.load(self.CUSTOM, []) or []   # [{id, word, lang, name, tiktok_id}]
         self.played_custom = []                      # ids of custom words whose round started (for the bot)
+        self.next_pick = None                        # (lang, level, word, tier) picked ahead for the next round
+        self.ranks = {}                              # (dict, word) -> rank array from the ranker Lambda
+        self.rank_source = ""                        # "lambda" | "local": where this round's table came from
         self.stats = SessionStats(store)
         used = store.load(self.USED, {})
         if isinstance(used, list):                   # old format: English only
@@ -168,15 +173,26 @@ class GuessGame(BaseGame):
             self.setter = {"id": item["tiktok_id"].lower(), "name": item["name"]}
             self.played_custom.append(item["id"])
         else:
-            self.secret, self.tier = self.sem.pick_secret(self._next_tier(), used)
+            nxt, self.next_pick = self.next_pick, None
+            if nxt and nxt[:2] == (self.lang, self.level) and nxt[2] not in used and nxt[2] in self.sem.index:
+                self.secret, self.tier = nxt[2], nxt[3]         # picked at the end of the last round
+            else:
+                self.secret, self.tier = self.sem.pick_secret(self._next_tier(), used)
         used.add(self.secret)
         self.store.save(self.USED, {k: sorted(v) for k, v in self.used.items()})
-        self.rank, self.order = self.sem.ranking(self.secret)
+        rank = self.ranks.pop((self.dict_key(self.round_lang, self.round_level), self.secret), None)
+        if rank is not None and len(rank) == self.sem.size:     # prepared by the ranker Lambda in the break
+            self.rank, self.order = rank, np.argsort(rank, kind="stable")
+            self.rank_source = "lambda"
+        else:
+            self.rank, self.order = self.sem.ranking(self.secret)
+            self.rank_source = "local"
+        self.ranks.clear()
         self.phase = COUNTDOWN
         self.phase_until = now + config.COUNTDOWN_SEC
         self.emit("countdown", round=self.round_id, roundType=self.round_type)
         print(f"[guess] round {self.round_id} ({self.round_type}, {self.tier}), "
-              f"secret has {len(self.secret)} letters")
+              f"secret has {len(self.secret)} letters, table: {self.rank_source}")
 
     def _start_playing(self, now):
         self.phase = PLAYING
@@ -236,6 +252,9 @@ class GuessGame(BaseGame):
             "podium": [p["name"] for p in self.podium],
             "setter": self.setter["name"] if self.setter else None, "hidden": self.word_hidden}])[-300:]
         self.store.save(self.ROUNDS, self.history)
+        used = self.used.get(self.lang, set())        # the next word, picked now: its table comes in the break
+        self.next_pick = (self.lang, self.level) + tuple(self.sem_for(self.lang, self.level)
+                                                        .pick_secret(self._next_tier(), used))
         print(f"[guess] round {self.round_id} {reason}: word={self.secret} "
               f"winner={player.name if player else '-'}")
 
@@ -731,6 +750,33 @@ class GuessGame(BaseGame):
         self.emit("mao_call", name=viewer.name, avatar=viewer.avatar)
         print(f"[guess] {viewer.name} calls Mao")
         return True
+
+    # ------------------------------------------------------------------ next round's table (ranker Lambda)
+    def dict_key(self, lang, level):
+        """name of the dictionary (assets folder) used for a language + level"""
+        easy = lang + "-easy"
+        if level == 1 and easy in self.sems:
+            return easy
+        return lang if lang in self.sems else easy
+
+    def sem_for(self, lang, level):
+        return self.sems[self.dict_key(lang, level)]
+
+    def planned_next(self):
+        """(dict, word, vocab hash) whose ranking the next round will need, or None"""
+        if self.phase not in (WINNER, REVEAL, FINISHED):
+            return None
+        for c in self.custom:                         # a viewer's word goes first (normal dictionary)
+            if c["lang"] == self.lang and c["word"] in self.sem_for(self.lang, 2).index:
+                key = self.dict_key(self.lang, 2)
+                return key, c["word"], self.sems[key].vocab_hash
+        if self.next_pick and self.next_pick[:2] == (self.lang, self.level):
+            key = self.dict_key(self.lang, self.level)
+            return key, self.next_pick[2], self.sems[key].vocab_hash
+        return None
+
+    def put_ranking(self, key, word, rank):
+        self.ranks[(key, word)] = np.asarray(rank, dtype=np.int32)
 
     def _shown_word(self):
         """the secret for the screen; a viewer's word nobody found stays secret"""
