@@ -151,6 +151,7 @@ class GuessGame(BaseGame):
         self.finished_at = 0.0
         self.unknown_t = 0.0
         self.setter = None            # {"id", "name"} of the viewer who picked this round's word
+        self.word_hidden = False      # a viewer's word nobody found: never shown
         self.setter_t = 0.0
 
     def _start_countdown(self, now):
@@ -206,10 +207,10 @@ class GuessGame(BaseGame):
         self.phase = WINNER
         self.finished_at = now
         self.phase_until = now + config.WINNER_SEC
-        if reason != "exact":
+        if reason != "exact":                        # nobody found it: no winner, the day's wins don't change
             self.emit("timeout", reason=reason)
-            ranked = self._ranked(confirmed_only=True)
-            player = ranked[0] if ranked else None
+            player = None
+            self.word_hidden = bool(self.setter)
         self.podium = self._podium()
         podium_ids = [p["id"] for p in self.podium]
         streak = self.stats.round_finished(self.players.values(),
@@ -220,7 +221,7 @@ class GuessGame(BaseGame):
                            "word": self.secret.upper(), "reason": reason,
                            "seconds": round(now - self.started_at), "guesses": player.guesses,
                            "best": player.best, "streak": streak}
-        self.emit("winner", reason=reason, word=self.secret.upper(),
+        self.emit("winner", reason=reason, word=self._shown_word(),
                   name=player.name if player else None,
                   avatar=player.avatar if player else "", streak=streak)
         if player and streak >= 2:
@@ -233,7 +234,7 @@ class GuessGame(BaseGame):
             "seconds": round(now - self.started_at), "players": len(self.players),
             "guesses": sum(p.guesses for p in self.players.values()), "at": int(now),
             "podium": [p["name"] for p in self.podium],
-            "setter": self.setter["name"] if self.setter else None}])[-300:]
+            "setter": self.setter["name"] if self.setter else None, "hidden": self.word_hidden}])[-300:]
         self.store.save(self.ROUNDS, self.history)
         print(f"[guess] round {self.round_id} {reason}: word={self.secret} "
               f"winner={player.name if player else '-'}")
@@ -627,7 +628,7 @@ class GuessGame(BaseGame):
                 return
             self.phase = REVEAL
             self.phase_until = now + self.reveal_sec
-            self.emit("reveal", word=self.secret.upper())
+            self.emit("reveal", word=self._shown_word())
         elif self.phase == REVEAL and now >= self.phase_until:
             self.phase = FINISHED
             self.dirty = True
@@ -731,6 +732,16 @@ class GuessGame(BaseGame):
         print(f"[guess] {viewer.name} calls Mao")
         return True
 
+    def _shown_word(self):
+        """the secret for the screen; a viewer's word nobody found stays secret"""
+        return self.secret.upper() if self.secret and not self.word_hidden else None
+
+    def _last_round(self):
+        if not self.history:
+            return None
+        lr = self.history[-1]
+        return dict(lr, word=None) if lr.get("hidden") else lr
+
     # ------------------------------------------------------------------ words picked by viewers (bot)
     def queue_custom(self, item):
         """A viewer's word from the bot -> (ok, dictionary word, round it will be played in)."""
@@ -805,7 +816,7 @@ class GuessGame(BaseGame):
             "phaseUntil": self.phase_until,
             "now": now,
             "paused": bool(self.paused_at),
-            "secretWord": self.secret.upper() if reveal and self.secret else None,
+            "secretWord": self._shown_word() if reveal else None,
             "guesses": [self._row(self.guesses[w]) for w in self.recent if w in self.guesses],
             "bestGuesses": [self._row(g) for g in best[:20] if g["rank"] > 1 or reveal],
             "topHunters": hunters,
@@ -818,7 +829,7 @@ class GuessGame(BaseGame):
                       "guesses": sum(p.guesses for p in self.players.values())},
             "streamLeaderboard": self.stats.leaderboard(),
             "champions": self.stats.champions(),                          # TT mode: medals block
-            "lastRound": self.history[-1] if self.history else None,    # for the ticker
+            "lastRound": self._last_round(),                             # for the ticker
             "chroma": self.chroma_top if self.chroma else 0,              # % of the screen, 0 = off
             "chromaTop": self.chroma_top,                                 # TT mode (?tt=1) always uses it
             "frame": self.frame,                                          # 9:frame
@@ -848,7 +859,7 @@ class GuessGame(BaseGame):
             "finished_at": self.finished_at, "difficulty": self.difficulty,
             "saved_at": self.paused_at or time.time(), "lang": self.round_lang,
             "level": self.round_level, "next_level": self.level,
-            "setter": self.setter, "setter_t": self.setter_t,
+            "setter": self.setter, "setter_t": self.setter_t, "word_hidden": self.word_hidden,
         })
 
     def load(self):
@@ -884,6 +895,7 @@ class GuessGame(BaseGame):
             self.auto_hint_done = d.get("auto_hint_done", False)
             self.finished_at = d.get("finished_at", 0.0)
             self.setter, self.setter_t = d.get("setter"), d.get("setter_t", 0.0)
+            self.word_hidden = d.get("word_hidden", False)
             self.paused_at = d.get("saved_at")         # timers resume on activation
             print(f"[guess] restored round {self.round_id} ({self.phase})")
         except Exception as e:

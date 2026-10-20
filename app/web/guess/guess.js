@@ -259,6 +259,7 @@
         break;
       case 'winner': {
         fx('winner');
+        if (!e.word) break;                       // a viewer's word nobody found: not said aloud
         const word = e.word.toLowerCase();
         if (e.reason === 'exact') voice(t('g.v.winner', { name, word }), 'urgent', 1);
         else if (e.name) voice(t('g.v.closest', { name, word }), 'high', 1);
@@ -447,7 +448,7 @@
       chips.forEach(c => $('wChips').append(el('span', 'chip', c)));
       if (w.streak >= 2) $('wChips').append(el('span', 'chip streak', t('g.w.streak', streakP(w.streak))));
     } else {
-      $('wName').textContent = ''; $('wSub').textContent = t('g.w.was');
+      $('wName').textContent = ''; $('wSub').textContent = t(s.secretWord ? 'g.w.was' : 'g.w.notFound');
     }
     fitText($('wWord'), s.secretWord || '');
   }

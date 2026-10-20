@@ -83,17 +83,19 @@ class GuessTest(unittest.TestCase):
         self.assertEqual(g.phase, guess_mod.WINNER)
         self.assertEqual(g.winner["name"], "Alex")
 
-    def test_timeout_picks_best_rank(self):
+    def test_timeout_has_no_winner(self):
         g = self.make()
         far, near = g.sem.words[int(g.order[3000])], g.sem.words[int(g.order[5])]
         g.on_comment(v("Alex"), far)
         g.on_comment(v("Mike"), near)
         g.tick(g.ends_at + 0.1)
         self.assertEqual(g.phase, guess_mod.WINNER)
-        self.assertEqual(g.winner["name"], "Mike")
-        self.assertEqual(g.winner["reason"], "timeout")
+        self.assertIsNone(g.winner)                             # nobody found it: nobody wins
+        self.assertEqual([p["name"] for p in g.podium][:2], ["Mike", "Alex"])   # the closest still listed
+        self.assertFalse(any(s["wins"] for s in g.stats.players.values()))     # the day's wins don't change
+        self.assertEqual(g.snapshot()["secretWord"], g.secret.upper())         # a random word is revealed
         g.on_comment(v("Sarah"), g.secret)                      # after timeout: no new winner
-        self.assertEqual(g.winner["name"], "Mike")
+        self.assertIsNone(g.winner)
 
     def test_guess_sent_before_round_is_ignored(self):
         g = self.make()
@@ -768,6 +770,20 @@ class CustomWordTest(unittest.TestCase):
         self.assertEqual(g.history[-1]["setter"], "воробей")
         g.tick(time.time() + 10**6); g.tick(time.time() + 2 * 10**6); g.tick(time.time() + 3 * 10**6)
         self.assertIsNone(g.setter)                                       # the next round is a normal one
+
+    def test_viewer_word_nobody_found_stays_secret(self):
+        g = GuessGame(JsonStore(tempfile.mkdtemp()))
+        g.set_lang("ru")
+        g.queue_custom({"id": "b1", "word": "огурец", "name": "воробей", "tiktok_id": "vorobey"})
+        g.tick(time.time()); g.tick(time.time() + 0.01)
+        g.tick(g.ends_at + 0.1)                                           # timeout
+        self.assertIsNone(g.winner)
+        self.assertIsNone([e for e in g.events if e["type"] == "winner"][-1]["word"])
+        self.assertIsNone(g.snapshot()["secretWord"])
+        self.assertIsNone(g.snapshot()["lastRound"]["word"])
+        self.assertEqual(g.history[-1]["word"], "огурец")                 # kept in the log on disk
+        g.tick(g.phase_until + 0.1)                                       # -> reveal
+        self.assertIsNone(g.events[-1]["word"])
 
 
 if __name__ == "__main__":
