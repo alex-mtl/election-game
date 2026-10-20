@@ -771,6 +771,7 @@ class CustomWordTest(unittest.TestCase):
         self.assertEqual(g.events[-1]["type"], "custom_ticker")
         g.on_comment(Viewer("ivan", "Иван", "", 1), "огурец")
         self.assertEqual(g.winner["name"], "Иван")
+        self.assertEqual((g.credits.get("vorobey"), g.unguessed_custom), (None, []))   # found: nothing earned
         self.assertEqual(g.history[-1]["setter"], "воробей")
         g.tick(time.time() + 10**6); g.tick(time.time() + 2 * 10**6); g.tick(time.time() + 3 * 10**6)
         self.assertIsNone(g.setter)                                       # the next round is a normal one
@@ -782,6 +783,8 @@ class CustomWordTest(unittest.TestCase):
         g.tick(time.time()); g.tick(time.time() + 0.01)
         g.tick(g.ends_at + 0.1)                                           # timeout
         self.assertIsNone(g.winner)
+        self.assertEqual(g.credits.get("vorobey"), 1)                     # the picker earns a hint
+        self.assertEqual(g.unguessed_custom, [{"id": "b1", "tiktok_id": "vorobey", "word": "огурец", "lang": "ru"}])
         self.assertIsNone([e for e in g.events if e["type"] == "winner"][-1]["word"])
         self.assertIsNone(g.snapshot()["secretWord"])
         self.assertIsNone(g.snapshot()["lastRound"]["word"])
@@ -900,6 +903,32 @@ class NoEmbeddingsTest(unittest.TestCase):
         self.assertAlmostEqual(g2.ends_at - time.time(), left, delta=2)   # the round goes on where it stopped
         g2.on_comment(Viewer("c", "C", "", 1), word)
         self.assertEqual(g2.winner["name"], "C")
+
+
+class TelegramPollTest(unittest.TestCase):
+    def test_poll_sends_credit_changes_and_unguessed_words(self):
+        import asyncio
+        from app.hub import Hub
+        from app.telegram_link import TelegramLink
+        hub = Hub(JsonStore(tempfile.mkdtemp()))
+        link = TelegramLink(hub, "http://bot", "k")
+        bodies = []
+
+        async def api(path, **body):
+            bodies.append(body)
+            return {"words": [], "cancel": []}
+        link.api = api
+        g = hub.games["guess"]
+        g.add_credits("vorobey", 2)
+        g.unguessed_custom.append({"id": "x", "tiktok_id": "vorobey", "word": "огурец", "lang": "ru"})
+        asyncio.run(link.poll())
+        self.assertEqual(bodies[-1]["credits"], {"vorobey": 2})
+        self.assertEqual(bodies[-1]["unguessed"][0]["word"], "огурец")
+        asyncio.run(link.poll())
+        self.assertEqual((bodies[-1]["credits"], bodies[-1]["unguessed"]), ({}, []))   # only changes
+        g.add_credits("vorobey", -2)                                       # spent: the bot hears 0
+        asyncio.run(link.poll())
+        self.assertEqual(bodies[-1]["credits"], {"vorobey": 0})
 
 
 if __name__ == "__main__":

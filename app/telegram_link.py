@@ -35,6 +35,7 @@ class TelegramLink:
         self.offline_since = None
         self.info_t = 0.0
         self.results = []             # dictionary checks of picked words, not yet delivered to the bot
+        self.sent_credits = {}        # hint credits as the bot last got them (only changes are sent)
 
     async def api(self, path, **body):
         import httpx
@@ -92,10 +93,16 @@ class TelegramLink:
         if not g:
             return
         played, g.played_custom = g.played_custom, []
-        r = await self.api("/game/poll", v=2, results=self.results, played=played)
+        unguessed, g.unguessed_custom = g.unguessed_custom, []
+        credits = {k: v for k, v in g.credits.items() if self.sent_credits.get(k) != v}
+        credits.update({k: 0 for k in self.sent_credits if k not in g.credits and self.sent_credits[k]})
+        r = await self.api("/game/poll", v=2, results=self.results, played=played, unguessed=unguessed,
+                           credits=credits)
         if "error" in r:
             g.played_custom = played + g.played_custom          # retry next time
+            g.unguessed_custom = unguessed + g.unguessed_custom
             return
+        self.sent_credits.update(credits)
         self.results = []
         for cid in r.get("cancel") or []:
             g.cancel_custom(cid)

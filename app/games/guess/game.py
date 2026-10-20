@@ -115,6 +115,7 @@ class GuessGame(BaseGame):
         self.mao_call_t = 0.0                        # last "мао внимание"
         self.custom = store.load(self.CUSTOM, []) or []   # [{id, word, lang, name, tiktok_id}]
         self.played_custom = []                      # ids of custom words whose round started (for the bot)
+        self.unguessed_custom = []                   # viewers' words nobody found (for the bot: saved for them)
         self.next_pick = None                        # (lang, level, word, tier) picked ahead for the next round
         self.ranks = {}                              # (dict, word) -> rank array from the ranker Lambda
         self.rank_source = ""                        # "lambda" | "local": where this round's table came from
@@ -173,7 +174,7 @@ class GuessGame(BaseGame):
         if item:                                     # a viewer's word: always the normal dictionary
             self.round_level = 2
             self.secret = item["word"]
-            self.setter = {"id": item["tiktok_id"].lower(), "name": item["name"]}
+            self.setter = {"id": item["tiktok_id"].lower(), "name": item["name"], "cid": item["id"]}
             self.played_custom.append(item["id"])
         else:
             nxt, self.next_pick = self.next_pick, None
@@ -230,6 +231,10 @@ class GuessGame(BaseGame):
             self.emit("timeout", reason=reason)
             player = None
             self.word_hidden = bool(self.setter)
+            if self.setter:                              # the picker earns a hint, the bot keeps the word for them
+                self.add_credits(self.setter["id"], 1)
+                self.unguessed_custom.append({"id": self.setter.get("cid", ""), "tiktok_id": self.setter["id"],
+                                              "word": self.secret, "lang": self.round_lang})
         self.podium = self._podium()
         podium_ids = [p["id"] for p in self.podium]
         streak = self.stats.round_finished(self.players.values(),
