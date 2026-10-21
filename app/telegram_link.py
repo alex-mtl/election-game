@@ -11,6 +11,7 @@ word back). It is requested when the TikTok LIVE connects and released when it h
 Settings: TG_BOT_URL and TG_GAME_KEY in .env (infrastructure, not game tunables)."""
 
 import asyncio
+import secrets
 import re
 import time
 
@@ -35,6 +36,8 @@ class TelegramLink:
         self.offline_since = None
         self.info_t = 0.0
         self.results = []             # dictionary checks of picked words, not yet delivered to the bot
+        # this running copy of the game: the bot warns if two copies use one key (a home game + the platform)
+        self.instance = secrets.token_hex(6)
         self.sent_credits = {}        # hint credits as the bot last got them (only changes are sent)
         self.sent_names = {}          # nicknames as the bot last got them (only new/changed ones are sent)
 
@@ -98,7 +101,7 @@ class TelegramLink:
         credits = {k: v for k, v in g.credits.items() if self.sent_credits.get(k) != v}
         credits.update({k: 0 for k in self.sent_credits if k not in g.credits and self.sent_credits[k]})
         names = dict(list((k, v) for k, v in self.hub.names.items() if self.sent_names.get(k) != v)[:500])
-        r = await self.api("/game/poll", v=2, results=self.results, played=played, unguessed=unguessed,
+        r = await self.api("/game/poll", v=2, instance=self.instance, results=self.results, played=played, unguessed=unguessed,
                            credits=credits, names=names, queue_ids=[c["id"] for c in g.custom])
         if "error" in r:
             g.played_custom = played + g.played_custom          # retry next time
@@ -117,7 +120,7 @@ class TelegramLink:
                 ok, word = g.check_custom(w)
                 self.results.append({"id": w["id"], "stage": "check", "ok": ok, "word": word})
         if self.results:                                         # answer right away, not in 10 s
-            r = await self.api("/game/poll", results=self.results, queue_ids=[c["id"] for c in g.custom])
+            r = await self.api("/game/poll", instance=self.instance, results=self.results, queue_ids=[c["id"] for c in g.custom])
             if "error" not in r:
                 self.results = []
                 for cid in r.get("cancel") or []:
